@@ -1,0 +1,25 @@
+import { Separator } from "@/components/ui/separator"
+import { SidebarTrigger } from "@/components/ui/sidebar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+
+export function SiteHeader() {
+  return (
+    <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
+      <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
+        <SidebarTrigger className="-ml-1 text-app-gold-100 hover:bg-transparent" />
+        <Separator
+          orientation="vertical"
+          className="mx-2 data-[orientation=vertical]:h-4"
+        />
+        <h1 className="text-base font-medium text-white">Overview</h1>
+        <div className="ml-auto flex items-center gap-2">
+          <Avatar className="h-8 w-8 border-2 border-app-gold-100">
+            <AvatarFallback className="bg-app-gold-100 text-black font-semibold text-sm">
+              A
+            </AvatarFallback>
+          </Avatar>
+        </div>
+      </div>
+    </header>
+  )
+}
