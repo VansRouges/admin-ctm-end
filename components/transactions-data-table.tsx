@@ -22,6 +22,7 @@ import {
   IconFilter,
   IconDownload,
   IconSearch,
+  IconLoader2,
 } from "@tabler/icons-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -51,14 +52,120 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Transaction } from "@/app/actions/transactions"
+import { Transaction, updateTransactionStatus } from "@/app/actions/transactions"
+import { toast } from "sonner"
+import { TransactionDetailsModal } from "@/components/transaction-details-modal"
 
 interface TransactionsDataTableProps {
   data: Transaction[]
   title: string
+  onTransactionUpdate?: () => void
 }
 
-const columns: ColumnDef<Transaction>[] = [
+function TransactionActions({ 
+  transaction, 
+  onUpdate 
+}: { 
+  transaction: Transaction; 
+  onUpdate?: () => void 
+}) {
+  const [isLoading, setIsLoading] = React.useState(false)
+  const [actionType, setActionType] = React.useState<'approve' | 'reject' | null>(null)
+  const [isModalOpen, setIsModalOpen] = React.useState(false)
+
+  const handleStatusUpdate = async (status: 'approved' | 'rejected' | 'pending') => {
+    if (isLoading) return
+    
+    setIsLoading(true)
+    setActionType(status === 'approved' ? 'approve' : 'reject')
+    
+    try {
+      const result = await updateTransactionStatus(
+        transaction._id,
+        transaction.type,
+        status
+      )
+      
+      if (result.success) {
+        toast.success(result.message)
+        onUpdate?.()
+      } else {
+        toast.error(result.message)
+      }
+    } catch (error) {
+      console.error('Transaction update error:', error)
+      toast.error('Failed to update transaction status')
+    } finally {
+      setIsLoading(false)
+      setActionType(null)
+    }
+  }
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            className="data-[state=open]:bg-muted text-muted-foreground flex size-8"
+            size="icon"
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <IconLoader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <IconDotsVertical />
+            )}
+            <span className="sr-only">Open menu</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-40">
+          <DropdownMenuItem onClick={() => setIsModalOpen(true)}>
+            <IconEye className="mr-2 h-4 w-4" />
+            View Details
+          </DropdownMenuItem>
+          {transaction.status === 'pending' && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={() => handleStatusUpdate('approved')}
+                disabled={isLoading}
+              >
+                {isLoading && actionType === 'approve' ? (
+                  <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <IconCheck className="mr-2 h-4 w-4" />
+                )}
+                Approve
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => handleStatusUpdate('rejected')}
+                disabled={isLoading}
+                className="text-red-600 focus:text-red-600"
+              >
+                {isLoading && actionType === 'reject' ? (
+                  <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <IconX className="mr-2 h-4 w-4" />
+                )}
+                Reject
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <TransactionDetailsModal
+        transaction={transaction}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onTransactionUpdate={onUpdate}
+      />
+    </>
+  )
+}
+
+const createColumns = (onTransactionUpdate?: () => void): ColumnDef<Transaction>[] => [
   {
     id: "select",
     header: ({ table }) => (
@@ -170,42 +277,15 @@ const columns: ColumnDef<Transaction>[] = [
   {
     id: "actions",
     cell: ({ row }) => (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            className="data-[state=open]:bg-muted text-muted-foreground flex size-8"
-            size="icon"
-          >
-            <IconDotsVertical />
-            <span className="sr-only">Open menu</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-40">
-          <DropdownMenuItem>
-            <IconEye className="mr-2 h-4 w-4" />
-            View Details
-          </DropdownMenuItem>
-          {row.original.status === 'pending' && (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <IconCheck className="mr-2 h-4 w-4" />
-                Approve
-              </DropdownMenuItem>
-              <DropdownMenuItem variant="destructive">
-                <IconX className="mr-2 h-4 w-4" />
-                Reject
-              </DropdownMenuItem>
-            </>
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <TransactionActions 
+        transaction={row.original}
+        onUpdate={onTransactionUpdate}
+      />
     ),
   },
 ]
 
-export function TransactionsDataTable({ data, title }: TransactionsDataTableProps) {
+export function TransactionsDataTable({ data, title, onTransactionUpdate }: TransactionsDataTableProps) {
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
@@ -214,6 +294,9 @@ export function TransactionsDataTable({ data, title }: TransactionsDataTableProp
     pageIndex: 0,
     pageSize: 10,
   })
+
+  // Create columns with the update callback
+  const columns = React.useMemo(() => createColumns(onTransactionUpdate), [onTransactionUpdate])
 
   const table = useReactTable({
     data,

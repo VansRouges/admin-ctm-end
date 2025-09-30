@@ -197,6 +197,13 @@
 .text-app-gold-500 { color: var(--app-gold-500); }
 .text-app-gold-600 { color: var(--app-gold-600); }
 
+.border-app-gold-100 { border-color: var(--app-gold-100); }
+.border-app-gold-200 { border-color: var(--app-gold-200); }
+.border-app-gold-300 { border-color: var(--app-gold-300); }
+.border-app-gold-400 { border-color: var(--app-gold-400); }
+.border-app-gold-500 { border-color: var(--app-gold-500); }
+.border-app-gold-600 { border-color: var(--app-gold-600); }
+
 .bg-gradient-gold { background: var(--gradient-gold); }
 .bg-gradient-gold-subtle { background: var(--gradient-gold-subtle); }
 .bg-gradient-gold-card { background: var(--gradient-gold-card); }

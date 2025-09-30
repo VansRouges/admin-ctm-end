@@ -1,7 +1,6 @@
 import { TransactionStats } from "@/app/actions/transactions";
 import {
   Card,
-  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
@@ -12,40 +11,42 @@ interface TransactionStatsCardsProps {
 }
 
 export function TransactionStatsCards({ stats }: TransactionStatsCardsProps) {
+  const { pendingDeposits, pendingWithdrawals, approvedToday, rejectedToday } = stats;
+  
   return (
     <div className="grid grid-cols-1 gap-4 px-4 lg:px-6 md:grid-cols-2 lg:grid-cols-4">
-      <Card>
+      <Card className="border-app-gold-100">
         <CardHeader className="pb-2">
           <CardDescription className="text-white">Pending Deposits</CardDescription>
           <CardTitle className="text-3xl font-bold text-orange-500">
-            {stats.pendingDeposits}
+            {pendingDeposits}
           </CardTitle>
         </CardHeader>
       </Card>
       
-      <Card>
+      <Card className="border-app-gold-100">
         <CardHeader className="pb-2">
           <CardDescription className="text-white">Pending Withdrawals</CardDescription>
           <CardTitle className="text-3xl font-bold text-orange-500">
-            {stats.pendingWithdrawals}
+            {pendingWithdrawals}
           </CardTitle>
         </CardHeader>
       </Card>
       
-      <Card>
+      <Card className="border-app-gold-100">
         <CardHeader className="pb-2">
           <CardDescription className="text-white">Total Approved Today</CardDescription>
           <CardTitle className="text-3xl font-bold text-green-500">
-            {stats.approvedToday}
+            {approvedToday}
           </CardTitle>
         </CardHeader>
       </Card>
       
-      <Card>
+      <Card className="border-app-gold-100">
         <CardHeader className="pb-2">
           <CardDescription className="text-white">Total Rejected Today</CardDescription>
           <CardTitle className="text-3xl font-bold text-red-500">
-            {stats.rejectedToday}
+            {rejectedToday}
           </CardTitle>
         </CardHeader>
       </Card>

@@ -1,19 +1,43 @@
-import { Suspense } from 'react'
+"use client"
+
+import { useEffect, useState } from 'react'
 import { fetchUsers } from '@/app/actions/users'
 import { UsersDataTable } from '@/components/users-data-table'
 import { DataTableSkeleton } from '@/components/data-table-skeleton'
+import type { User } from '@/app/actions/users'
 
-async function UsersTableData() {
-  try {
-    const usersData = await fetchUsers()
-    
-    if (!usersData.success) {
-      throw new Error(usersData.message)
+export function UsersTableWrapper() {
+  const [users, setUsers] = useState<User[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        setLoading(true)
+        const usersData = await fetchUsers()
+        
+        if (!usersData.success) {
+          throw new Error(usersData.message)
+        }
+
+        setUsers(usersData.data)
+      } catch (err) {
+        console.error('Failed to fetch users:', err)
+        setError(err instanceof Error ? err.message : 'Failed to load users')
+      } finally {
+        setLoading(false)
+      }
     }
 
-    return <UsersDataTable data={usersData.data} />
-  } catch (error) {
-    console.error('Failed to fetch users:', error)
+    loadUsers()
+  }, [])
+
+  if (loading) {
+    return <DataTableSkeleton />
+  }
+
+  if (error) {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="text-center">
@@ -31,12 +55,6 @@ async function UsersTableData() {
       </div>
     )
   }
-}
 
-export function UsersTableWrapper() {
-  return (
-    <Suspense fallback={<DataTableSkeleton />}>
-      <UsersTableData />
-    </Suspense>
-  )
+  return <UsersDataTable data={users} />
 }

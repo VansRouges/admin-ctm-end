@@ -31,6 +31,112 @@ export interface TransactionStats {
   rejectedToday: number;
 }
 
+export interface UpdateTransactionStatusResponse {
+  success: boolean;
+  message: string;
+  data?: Transaction;
+}
+
+export async function updateDepositStatus(
+  depositId: string, 
+  status: 'approved' | 'rejected' | 'pending'
+): Promise<UpdateTransactionStatusResponse> {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('token')?.value;
+
+    if (!token) {
+      return {
+        success: false,
+        message: 'Authentication token not found'
+      };
+    }
+
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/deposits/${depositId}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ status })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to update deposit status: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    
+    return {
+      success: true,
+      message: data.message || `Deposit ${status} successfully`,
+      data: data.data
+    };
+  } catch (error) {
+    console.error('Error updating deposit status:', error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to update deposit status'
+    };
+  }
+}
+
+export async function updateWithdrawalStatus(
+  withdrawalId: string, 
+  status: 'approved' | 'rejected' | 'pending'
+): Promise<UpdateTransactionStatusResponse> {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('token')?.value;
+
+    if (!token) {
+      return {
+        success: false,
+        message: 'Authentication token not found'
+      };
+    }
+
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/withdraws/${withdrawalId}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ status })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to update withdrawal status: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    
+    return {
+      success: true,
+      message: data.message || `Withdrawal ${status} successfully`,
+      data: data.data
+    };
+  } catch (error) {
+    console.error('Error updating withdrawal status:', error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to update withdrawal status'
+    };
+  }
+}
+
+export async function updateTransactionStatus(
+  transactionId: string,
+  transactionType: 'deposit' | 'withdrawal',
+  status: 'approved' | 'rejected' | 'pending'
+): Promise<UpdateTransactionStatusResponse> {
+  if (transactionType === 'deposit') {
+    return updateDepositStatus(transactionId, status);
+  } else {
+    return updateWithdrawalStatus(transactionId, status);
+  }
+}
+
 export async function fetchTransactions(): Promise<TransactionsResponse> {
   try {
     const cookieStore = await cookies();
@@ -46,30 +152,55 @@ export async function fetchTransactions(): Promise<TransactionsResponse> {
       };
     }
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/deposits`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    // Fetch both deposits and withdrawals in parallel
+    const [depositsResponse, withdrawalsResponse] = await Promise.all([
+      fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/deposits`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      }),
+      fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/withdraws`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+    ]);
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch transactions: ${response.statusText}`);
+    if (!depositsResponse.ok || !withdrawalsResponse.ok) {
+      throw new Error(`Failed to fetch transactions: ${depositsResponse.statusText} / ${withdrawalsResponse.statusText}`);
     }
 
-    const data = await response.json();
+    const [depositsData, withdrawalsData] = await Promise.all([
+      depositsResponse.json(),
+      withdrawalsResponse.json()
+    ]);
     
-    // Normalize transaction data to include type field
-    const normalizedData = {
-      ...data,
-      data: data.data.map((transaction: Omit<Transaction, 'type'>) => ({
-        ...transaction,
-        type: transaction.isDeposit ? 'deposit' as const : 'withdrawal' as const
-      }))
+    // Normalize and combine transaction data
+    const normalizedDeposits = depositsData.data.map((transaction: Omit<Transaction, 'type'>) => ({
+      ...transaction,
+      type: 'deposit' as const
+    }));
+
+    const normalizedWithdrawals = withdrawalsData.data.map((transaction: Omit<Transaction, 'type'>) => ({
+      ...transaction,
+      type: 'withdrawal' as const
+    }));
+
+    // Combine all transactions
+    const allTransactions = [...normalizedDeposits, ...normalizedWithdrawals];
+    
+    // Sort by creation date (newest first)
+    allTransactions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    
+    return {
+      success: true,
+      data: allTransactions,
+      count: allTransactions.length
     };
-    
-    return normalizedData;
   } catch (error) {
     console.error('Error fetching transactions:', error);
     // Return empty data structure on any error to prevent page crash
