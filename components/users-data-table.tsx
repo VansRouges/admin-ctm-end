@@ -21,6 +21,7 @@ import {
   IconLayoutColumns,
   IconPlus,
 } from "@tabler/icons-react"
+import { useRouter } from "next/navigation"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -52,7 +53,14 @@ import {
 } from "@/components/ui/table"
 import { User } from "@/app/actions/users"
 
-const columns: ColumnDef<User>[] = [
+export function UsersDataTable({
+  data,
+}: {
+  data: User[]
+}) {
+  const router = useRouter()
+  
+  const columns: ColumnDef<User>[] = [
   {
     id: "select",
     header: ({ table }) => (
@@ -171,7 +179,7 @@ const columns: ColumnDef<User>[] = [
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-40">
-          <DropdownMenuItem>
+          <DropdownMenuItem onClick={() => router.push(`/dashboard/users/${row.original._id}/info`)}>
             <IconEye className="mr-2 h-4 w-4" />
             View Details
           </DropdownMenuItem>
@@ -185,12 +193,6 @@ const columns: ColumnDef<User>[] = [
     ),
   },
 ]
-
-export function UsersDataTable({
-  data,
-}: {
-  data: User[]
-}) {
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])

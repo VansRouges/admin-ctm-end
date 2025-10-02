@@ -74,9 +74,14 @@ export async function getCryptoOptions(): Promise<CryptoOptionsResponse> {
 
     const data = await response.json();
     
+    // Sort by most recent first (createdAt descending)
+    const sortedData = (data.data || []).sort((a: CryptoOption, b: CryptoOption) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+    
     return {
       success: true,
-      data: data.data || [],
+      data: sortedData,
       message: data.message
     };
   } catch (error) {

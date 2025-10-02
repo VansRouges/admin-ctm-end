@@ -78,9 +78,13 @@ export async function getEmails(): Promise<EmailListResponse> {
     }
 
     const data = await response.json();
+    // Sort by most recent first (createdAt descending)
+    const sortedData = (data.data || []).sort((a: Email, b: Email) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
     return {
       success: true,
-      data: data.data || [],
+      data: sortedData,
       count: data.count || 0,
     };
   } catch (error) {
