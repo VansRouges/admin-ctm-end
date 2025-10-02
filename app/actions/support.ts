@@ -239,17 +239,3 @@ export async function getSupportTicketById(ticketId: string): Promise<ApiRespons
     };
   }
 }
-
-/**
- * Helper function to validate status
- */
-export function isValidStatus(status: string): status is SupportTicket['status'] {
-  return ALLOWED_STATUSES.includes(status as SupportTicket['status']);
-}
-
-/**
- * Get all allowed statuses
- */
-export function getAllowedStatuses(): readonly string[] {
-  return ALLOWED_STATUSES;
-}
