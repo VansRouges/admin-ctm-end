@@ -1,142 +1,128 @@
+"use client"
+
+import { useState, useEffect, useCallback } from "react"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Shield, Activity, AlertCircle, CheckCircle } from "lucide-react"
-
-// Force dynamic rendering
-export const dynamic = 'force-dynamic'
+import { Activity, AlertCircle, CheckCircle, ChevronLeft, ChevronRight, Filter, FileText } from "lucide-react"
+import { getAuditLogs, getAuditStats, AuditLog } from "@/app/actions/audit"
+import { toast } from "sonner"
+import { DataTableSkeleton } from "@/components/data-table-skeleton"
 
 export default function AuditsPage() {
-  // Dummy audit stats
-  const auditStats = {
-    totalAudits: 1247,
-    criticalAlerts: 3,
-    warningsToday: 12,
-    successfulChecks: 1232,
-  }
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([])
+  const [stats, setStats] = useState<{
+    totalLogs: number;
+    topActions: Array<{ _id: string; count: number }>;
+    resourceBreakdown: Array<{ _id: string; count: number }>;
+  } | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [actionFilter, setActionFilter] = useState<string>('all')
+  const [resourceFilter, setResourceFilter] = useState<string>('all')
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 15
 
-  // Dummy audit logs
-  const auditLogs = [
-    { 
-      id: 1, 
-      timestamp: "2025-10-02 14:23:15", 
-      action: "User Login", 
-      user: "admin@ctm.com", 
-      status: "success", 
-      details: "Successful authentication from IP 192.168.1.1",
-      severity: "info"
-    },
-    { 
-      id: 2, 
-      timestamp: "2025-10-02 14:15:42", 
-      action: "Transaction Approved", 
-      user: "admin@ctm.com", 
-      status: "success", 
-      details: "Deposit of $5,000 approved for user john@example.com",
-      severity: "info"
-    },
-    { 
-      id: 3, 
-      timestamp: "2025-10-02 13:58:21", 
-      action: "Failed Login Attempt", 
-      user: "unknown@user.com", 
-      status: "warning", 
-      details: "Multiple failed login attempts detected from IP 45.123.45.67",
-      severity: "warning"
-    },
-    { 
-      id: 4, 
-      timestamp: "2025-10-02 13:45:33", 
-      action: "Database Backup", 
-      user: "system", 
-      status: "success", 
-      details: "Automated daily backup completed successfully",
-      severity: "info"
-    },
-    { 
-      id: 5, 
-      timestamp: "2025-10-02 13:30:12", 
-      action: "User Data Modified", 
-      user: "admin@ctm.com", 
-      status: "success", 
-      details: "Updated KYC status for user jane@example.com",
-      severity: "info"
-    },
-    { 
-      id: 6, 
-      timestamp: "2025-10-02 13:12:45", 
-      action: "Security Alert", 
-      user: "system", 
-      status: "critical", 
-      details: "Unusual withdrawal pattern detected - requires investigation",
-      severity: "critical"
-    },
-    { 
-      id: 7, 
-      timestamp: "2025-10-02 12:58:19", 
-      action: "API Rate Limit", 
-      user: "api_client_123", 
-      status: "warning", 
-      details: "Rate limit exceeded for API endpoint /api/v1/deposits",
-      severity: "warning"
-    },
-    { 
-      id: 8, 
-      timestamp: "2025-10-02 12:43:07", 
-      action: "Support Ticket Created", 
-      user: "user@example.com", 
-      status: "success", 
-      details: "New support ticket #1547 - Account access issue",
-      severity: "info"
-    },
-    { 
-      id: 9, 
-      timestamp: "2025-10-02 12:25:53", 
-      action: "Password Reset", 
-      user: "testuser@ctm.com", 
-      status: "success", 
-      details: "Password reset request completed successfully",
-      severity: "info"
-    },
-    { 
-      id: 10, 
-      timestamp: "2025-10-02 12:10:38", 
-      action: "Email Sent", 
-      user: "system", 
-      status: "success", 
-      details: "Welcome email sent to newuser@example.com",
-      severity: "info"
-    },
-  ]
+  const fetchAuditLogs = useCallback(async () => {
+    try {
+      setLoading(true)
+      const params: Parameters<typeof getAuditLogs>[0] = {
+        sortBy: 'createdAt',
+        sortOrder: 'desc'
+      }
+      
+      if (actionFilter !== 'all') {
+        params.action = actionFilter
+      }
+      
+      if (resourceFilter !== 'all') {
+        params.resourceType = resourceFilter
+      }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'success':
-        return <Badge className="bg-green-500 text-white border-0">Success</Badge>
-      case 'warning':
-        return <Badge className="bg-yellow-500 text-white border-0">Warning</Badge>
-      case 'critical':
-        return <Badge className="bg-red-500 text-white border-0">Critical</Badge>
-      default:
-        return <Badge className="bg-gray-500 text-white border-0">Unknown</Badge>
+      const response = await getAuditLogs(params)
+      setAuditLogs(response.data)
+    } catch (error) {
+      console.error('Error fetching audit logs:', error)
+      toast.error('Failed to load audit logs')
+    } finally {
+      setLoading(false)
+    }
+  }, [actionFilter, resourceFilter])
+
+  const fetchStats = async () => {
+    try {
+      const response = await getAuditStats()
+      setStats(response.data)
+    } catch (error) {
+      console.error('Error fetching stats:', error)
     }
   }
 
-  const getSeverityIcon = (severity: string) => {
-    switch (severity) {
-      case 'critical':
-        return <AlertCircle className="h-4 w-4 text-red-500" />
-      case 'warning':
-        return <AlertCircle className="h-4 w-4 text-yellow-500" />
-      case 'info':
-        return <CheckCircle className="h-4 w-4 text-green-500" />
+  useEffect(() => {
+    fetchAuditLogs()
+    fetchStats()
+  }, [fetchAuditLogs])
+
+  const formatActionLabel = (action: string) => {
+    return action.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
+  const getActionBadgeColor = (action: string) => {
+    if (action.includes('delete')) return 'bg-red-500 text-white border-0'
+    if (action.includes('create')) return 'bg-green-500 text-white border-0'
+    if (action.includes('update')) return 'bg-blue-500 text-white border-0'
+    if (action.includes('login')) return 'bg-purple-500 text-white border-0'
+    if (action.includes('logout')) return 'bg-gray-500 text-white border-0'
+    return 'bg-yellow-500 text-white border-0'
+  }
+
+  const getResourceBadgeColor = (resourceType: string) => {
+    switch (resourceType) {
+      case 'user':
+        return 'bg-blue-500 text-white border-0'
+      case 'notification':
+        return 'bg-purple-500 text-white border-0'
+      case 'support_ticket':
+        return 'bg-yellow-500 text-white border-0'
+      case 'copytrade_purchase':
+        return 'bg-green-500 text-white border-0'
+      case 'admin':
+        return 'bg-red-500 text-white border-0'
       default:
-        return <Activity className="h-4 w-4 text-gray-500" />
+        return 'bg-gray-500 text-white border-0'
     }
   }
+
+  const getStatusIcon = (statusCode: number) => {
+    if (statusCode >= 200 && statusCode < 300) {
+      return <CheckCircle className="h-4 w-4 text-green-500" />
+    } else if (statusCode >= 400 && statusCode < 500) {
+      return <AlertCircle className="h-4 w-4 text-yellow-500" />
+    } else if (statusCode >= 500) {
+      return <AlertCircle className="h-4 w-4 text-red-500" />
+    }
+    return <Activity className="h-4 w-4 text-gray-500" />
+  }
+
+  // Pagination
+  const totalPages = Math.ceil(auditLogs.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedLogs = auditLogs.slice(startIndex, endIndex)
 
   return (
     <SidebarProvider
@@ -156,124 +142,218 @@ export default function AuditsPage() {
               {/* Header */}
               <div className="flex justify-between items-center">
                 <div>
-                  <h1 className="text-3xl font-bold text-yellow-500">System Audits</h1>
-                  <p className="text-gray-400 mt-2">Monitor system activities and security events</p>
+                  <h1 className="text-3xl font-bold text-yellow-500 flex items-center gap-2">
+                    <FileText className="h-8 w-8" />
+                    System Audits
+                  </h1>
+                  <p className="text-gray-400 mt-2">Monitor administrative actions and system events</p>
                 </div>
               </div>
 
               {/* Stats Cards */}
-              <div className="grid grid-cols-2 gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card className="bg-gray-900 border-gray-700">
-                  <CardHeader className="pb-2">
-                    <CardDescription className="text-gray-300">Total Audits</CardDescription>
-                    <CardTitle className="text-2xl font-bold text-blue-500">
-                      {auditStats.totalAudits}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center text-sm text-gray-400">
-                      <Activity className="h-4 w-4 mr-1" />
-                      All time
-                    </div>
-                  </CardContent>
-                </Card>
+              {stats && (
+                <div className="grid grid-cols-2 gap-4 md:grid-cols-2 lg:grid-cols-4">
+                  <Card className="bg-gray-900 border-gray-700">
+                    <CardHeader className="pb-2">
+                      <CardDescription className="text-gray-300">Total Audit Logs</CardDescription>
+                      <CardTitle className="text-2xl font-bold text-blue-500">
+                        {stats.totalLogs}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center text-sm text-gray-400">
+                        <Activity className="h-4 w-4 mr-1" />
+                        All time
+                      </div>
+                    </CardContent>
+                  </Card>
 
-                <Card className="bg-gray-900 border-gray-700">
-                  <CardHeader className="pb-2">
-                    <CardDescription className="text-gray-300">Critical Alerts</CardDescription>
-                    <CardTitle className="text-2xl font-bold text-red-500">
-                      {auditStats.criticalAlerts}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center text-sm text-red-500">
-                      <AlertCircle className="h-4 w-4 mr-1" />
-                      Requires attention
-                    </div>
-                  </CardContent>
-                </Card>
+                  {stats.topActions.slice(0, 3).map((action, index) => (
+                    <Card key={action._id} className="bg-gray-900 border-gray-700">
+                      <CardHeader className="pb-2">
+                        <CardDescription className="text-gray-300">
+                          {formatActionLabel(action._id)}
+                        </CardDescription>
+                        <CardTitle className="text-2xl font-bold text-yellow-500">
+                          {action.count}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center text-sm text-gray-400">
+                          <CheckCircle className="h-4 w-4 mr-1" />
+                          Top {index + 1} action
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
 
-                <Card className="bg-gray-900 border-gray-700">
-                  <CardHeader className="pb-2">
-                    <CardDescription className="text-gray-300">Warnings Today</CardDescription>
-                    <CardTitle className="text-2xl font-bold text-yellow-500">
-                      {auditStats.warningsToday}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center text-sm text-yellow-500">
-                      <AlertCircle className="h-4 w-4 mr-1" />
-                      Last 24 hours
+              {/* Filters */}
+              <Card className="bg-gray-900 border-gray-700">
+                <CardHeader>
+                  <CardTitle className="text-yellow-500 flex items-center gap-2">
+                    <Filter className="h-5 w-5" />
+                    Filters
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-gray-300 text-sm mb-2 block">Action Type</label>
+                      <Select value={actionFilter} onValueChange={(value) => {
+                        setActionFilter(value)
+                        setCurrentPage(1)
+                      }}>
+                        <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Actions</SelectItem>
+                          <SelectItem value="admin_login">Admin Login</SelectItem>
+                          <SelectItem value="admin_logout">Admin Logout</SelectItem>
+                          <SelectItem value="user_update">User Update</SelectItem>
+                          <SelectItem value="user_delete">User Delete</SelectItem>
+                          <SelectItem value="notification_update">Notification Update</SelectItem>
+                          <SelectItem value="notification_delete">Notification Delete</SelectItem>
+                          <SelectItem value="support_ticket_update">Support Ticket Update</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                  </CardContent>
-                </Card>
 
-                <Card className="bg-gray-900 border-gray-700">
-                  <CardHeader className="pb-2">
-                    <CardDescription className="text-gray-300">Successful Checks</CardDescription>
-                    <CardTitle className="text-2xl font-bold text-green-500">
-                      {auditStats.successfulChecks}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center text-sm text-green-500">
-                      <CheckCircle className="h-4 w-4 mr-1" />
-                      System healthy
+                    <div>
+                      <label className="text-gray-300 text-sm mb-2 block">Resource Type</label>
+                      <Select value={resourceFilter} onValueChange={(value) => {
+                        setResourceFilter(value)
+                        setCurrentPage(1)
+                      }}>
+                        <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Resources</SelectItem>
+                          <SelectItem value="user">User</SelectItem>
+                          <SelectItem value="notification">Notification</SelectItem>
+                          <SelectItem value="support_ticket">Support Ticket</SelectItem>
+                          <SelectItem value="copytrade_purchase">Copytrade Purchase</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                  </CardContent>
-                </Card>
-              </div>
+                  </div>
+                </CardContent>
+              </Card>
 
               {/* Audit Logs Table */}
               <Card className="bg-gray-900 border-gray-700">
                 <CardHeader>
-                  <CardTitle className="text-yellow-500">Recent Audit Logs</CardTitle>
+                  <CardTitle className="text-yellow-500">Audit Trail</CardTitle>
                   <CardDescription className="text-gray-300">
-                    Latest system activities and security events
+                    Showing {paginatedLogs.length} of {auditLogs.length} audit logs
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="overflow-y-auto max-h-[600px]">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="border-gray-700 hover:bg-gray-800/50">
-                          <TableHead className="text-gray-300 font-semibold"></TableHead>
-                          <TableHead className="text-gray-300 font-semibold">Timestamp</TableHead>
-                          <TableHead className="text-gray-300 font-semibold">Action</TableHead>
-                          <TableHead className="text-gray-300 font-semibold">User</TableHead>
-                          <TableHead className="text-gray-300 font-semibold">Status</TableHead>
-                          <TableHead className="text-gray-300 font-semibold">Details</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {auditLogs.map((log) => (
-                          <TableRow 
-                            key={log.id}
-                            className="border-gray-700 hover:bg-gray-800/30 transition-colors"
-                          >
-                            <TableCell>
-                              {getSeverityIcon(log.severity)}
-                            </TableCell>
-                            <TableCell className="text-gray-200 font-mono text-sm">
-                              {log.timestamp}
-                            </TableCell>
-                            <TableCell className="text-gray-200 font-medium">
-                              {log.action}
-                            </TableCell>
-                            <TableCell className="text-gray-200">
-                              {log.user}
-                            </TableCell>
-                            <TableCell>
-                              {getStatusBadge(log.status)}
-                            </TableCell>
-                            <TableCell className="text-gray-400 max-w-md truncate">
-                              {log.details}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
+                  {loading ? (
+                    <DataTableSkeleton />
+                  ) : auditLogs.length === 0 ? (
+                    <div className="text-center py-12">
+                      <FileText className="h-12 w-12 text-gray-600 mx-auto mb-4" />
+                      <p className="text-gray-400 text-lg">No audit logs found</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="border-gray-700 hover:bg-gray-800/50">
+                              <TableHead className="text-gray-300 font-semibold">Status</TableHead>
+                              <TableHead className="text-gray-300 font-semibold">Action</TableHead>
+                              <TableHead className="text-gray-300 font-semibold">Resource</TableHead>
+                              <TableHead className="text-gray-300 font-semibold">Admin</TableHead>
+                              <TableHead className="text-gray-300 font-semibold">Description</TableHead>
+                              <TableHead className="text-gray-300 font-semibold">IP Address</TableHead>
+                              <TableHead className="text-gray-300 font-semibold">Timestamp</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {paginatedLogs.map((log) => (
+                              <TableRow 
+                                key={log._id}
+                                className="border-gray-700 hover:bg-gray-800/30 transition-colors"
+                              >
+                                <TableCell>
+                                  {getStatusIcon(log.metadata.statusCode)}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge className={getActionBadgeColor(log.action)}>
+                                    {formatActionLabel(log.action)}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="space-y-1">
+                                    <Badge className={getResourceBadgeColor(log.resource.type)}>
+                                      {formatActionLabel(log.resource.type)}
+                                    </Badge>
+                                    <p className="text-xs text-gray-400 truncate max-w-[150px]">
+                                      {log.resource.name}
+                                    </p>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="space-y-1">
+                                    <p className="text-gray-200 font-medium text-sm">
+                                      {log.admin.username}
+                                    </p>
+                                    <p className="text-xs text-gray-400 truncate max-w-[150px]">
+                                      {log.admin.email}
+                                    </p>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-gray-200 max-w-xs truncate">
+                                  {log.description}
+                                </TableCell>
+                                <TableCell className="text-gray-400 text-sm font-mono">
+                                  {log.metadata.ip}
+                                </TableCell>
+                                <TableCell className="text-gray-400 text-sm whitespace-nowrap">
+                                  {formatDate(log.createdAt)}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+
+                      {/* Pagination */}
+                      {totalPages > 1 && (
+                        <div className="flex items-center justify-between mt-6">
+                          <div className="text-gray-400 text-sm">
+                            Page {currentPage} of {totalPages}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                              disabled={currentPage === 1}
+                              className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700"
+                            >
+                              <ChevronLeft className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                              disabled={currentPage === totalPages}
+                              className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700"
+                            >
+                              <ChevronRight className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </div>
