@@ -8,6 +8,7 @@ import {
   IconSettings,
   IconMail,
   IconDatabase,
+  IconUserCheck,
   IconHelp,
 } from "@tabler/icons-react"
 
@@ -55,6 +56,11 @@ const data = {
       title: "Mails",
       url: "/dashboard/mails",
       icon: IconMail,
+    },
+    {
+      title: "KYC",
+      url: "/dashboard/kyc",
+      icon: IconUserCheck,
     },
     {
       title: "Support Requests",
