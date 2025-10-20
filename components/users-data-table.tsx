@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useState, useTransition } from "react"
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -19,10 +20,9 @@ import {
   IconEye, 
   IconTrash,
   IconLayoutColumns,
-  IconPlus,
 } from "@tabler/icons-react"
 import { useRouter } from "next/navigation"
-
+import { deleteUser } from "@/app/actions/users"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -52,14 +52,19 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { User } from "@/app/actions/users"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle} from "@/components/ui/dialog"
 
 export function UsersDataTable({
   data,
+  onRefresh,
 }: {
   data: User[]
+  onRefresh?: () => void
 }) {
   const router = useRouter()
-  
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [userToDelete, setUserToDelete] = useState<User | null>(null)
+  const [isPending, startTransition] = useTransition()
   const columns: ColumnDef<User>[] = [
   {
     id: "select",
@@ -184,7 +189,13 @@ export function UsersDataTable({
             View Details
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive">
+          <DropdownMenuItem 
+            variant="destructive"
+            onClick={() => {
+              setUserToDelete(row.original)
+              setDeleteDialogOpen(true)
+            }}
+          >
             <IconTrash className="mr-2 h-4 w-4" />
             Delete
           </DropdownMenuItem>
@@ -390,6 +401,53 @@ export function UsersDataTable({
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="bg-gray-900 border-gray-700">
+          <DialogHeader>
+            <DialogTitle className="text-white">Delete User</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              {`Are you sure you want to delete user ${userToDelete?.email} from the platform? This action cannot be undone.`}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button 
+              variant="secondary" 
+              onClick={() => setDeleteDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => {
+                if (userToDelete) {
+                  startTransition(async () => {
+                    try {
+                      await deleteUser(userToDelete._id)
+                      setDeleteDialogOpen(false)
+                      setUserToDelete(null)
+                      // Call the refresh function passed from parent
+                      if (onRefresh) {
+                        onRefresh()
+                      } else {
+                        // Fallback to router refresh
+                        router.refresh()
+                      }
+                    } catch (error) {
+                      console.error('Error deleting user:', error)
+                      // Keep dialog open on error so user can retry
+                    }
+                  })
+                }
+              }}
+              disabled={isPending}
+            >
+              {isPending ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

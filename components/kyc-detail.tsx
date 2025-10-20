@@ -20,13 +20,13 @@ export function KYCDetail({ kyc }: KYCDetailProps) {
   const router = useRouter()
   const [isUpdating, setIsUpdating] = useState(false)
 
-  const handleStatusUpdate = async (newStatus: 'approved' | 'rejected') => {
+  const handleStatusUpdate = async (newStatus: 'approved' | 'rejected' | 'under_review' | 'pending') => {
     try {
       setIsUpdating(true)
       const result = await updateKYCStatus(kyc._id, newStatus)
       
       if (result.success) {
-        toast.success(`KYC ${newStatus === 'approved' ? 'approved' : 'rejected'} successfully`)
+        toast.success(`KYC status updated to ${newStatus.replace('_', ' ')} successfully`)
         router.refresh()
       } else {
         toast.error(result.message || 'Failed to update KYC status')
@@ -67,8 +67,6 @@ export function KYCDetail({ kyc }: KYCDetailProps) {
   return (
     <>
       <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
-        <SidebarTrigger className="-ml-1" />
-        <Separator orientation="vertical" className="mr-2 h-4" />
         <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem className="hidden md:block">
@@ -101,16 +99,19 @@ export function KYCDetail({ kyc }: KYCDetailProps) {
             </div>
 
             {/* Action Buttons */}
-            {kyc.status === 'pending' && (
-              <div className="flex gap-4">
+            <div className="flex flex-wrap gap-2">
+              {kyc.status !== 'approved' && (
                 <Button
                   onClick={() => handleStatusUpdate('approved')}
                   disabled={isUpdating}
                   className="bg-green-500 hover:bg-green-600 text-white"
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
-                  {isUpdating ? 'Updating...' : 'Approve KYC'}
+                  {isUpdating ? 'Updating...' : 'Approve'}
                 </Button>
+              )}
+              
+              {kyc.status !== 'rejected' && (
                 <Button
                   onClick={() => handleStatusUpdate('rejected')}
                   disabled={isUpdating}
@@ -118,10 +119,32 @@ export function KYCDetail({ kyc }: KYCDetailProps) {
                   className="bg-red-500 hover:bg-red-600"
                 >
                   <XCircle className="h-4 w-4 mr-2" />
-                  {isUpdating ? 'Updating...' : 'Reject KYC'}
+                  {isUpdating ? 'Updating...' : 'Reject'}
                 </Button>
-              </div>
-            )}
+              )}
+              
+              {kyc.status !== 'under_review' && (
+                <Button
+                  onClick={() => handleStatusUpdate('under_review')}
+                  disabled={isUpdating}
+                  className="bg-blue-500 hover:bg-blue-600 text-white"
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  {isUpdating ? 'Updating...' : 'Under Review'}
+                </Button>
+              )}
+              
+              {kyc.status !== 'pending' && (
+                <Button
+                  onClick={() => handleStatusUpdate('pending')}
+                  disabled={isUpdating}
+                  className="bg-yellow-500 hover:bg-yellow-600 text-white"
+                >
+                  <Calendar className="h-4 w-4 mr-2" />
+                  {isUpdating ? 'Updating...' : 'Back to Pending'}
+                </Button>
+              )}
+            </div>
 
             {/* User Information */}
             <Card className="bg-gray-900 border-gray-700">
@@ -134,10 +157,14 @@ export function KYCDetail({ kyc }: KYCDetailProps) {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
+                    <p className="text-gray-200 font-medium mt-1">
+                        {kyc.userId?.firstName || 'N/A'} {kyc.userId?.lastName || 'N/A'}
+                      </p>
                     <div>
                       <label className="text-gray-400 text-sm">Full Name (KYC)</label>
                       <p className="text-gray-200 font-medium mt-1">{kyc.fullName}</p>
                     </div>
+                    <p className="text-gray-200">{kyc.userId?.email || 'N/A'}</p>
                     <div>
                       <label className="text-gray-400 text-sm">Phone Number</label>
                       <div className="flex items-center gap-2 mt-1">

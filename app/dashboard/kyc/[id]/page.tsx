@@ -12,13 +12,14 @@ export const dynamic = 'force-dynamic'
 export default async function KYCDetailPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
   // Fetch KYC data from the server
   let kyc
   
   try {
-    const result = await getKYCById(params.id)
+    const resolvedParams = await params
+    const result = await getKYCById(resolvedParams.id)
     
     if (!result.success || !result.kyc) {
       notFound()
@@ -29,7 +30,7 @@ export default async function KYCDetailPage({
     console.error("Error fetching KYC:", error)
     notFound()
   }
-
+  
   return (
     <SidebarProvider
       style={

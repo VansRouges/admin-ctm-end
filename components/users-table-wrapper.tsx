@@ -11,27 +11,31 @@ export function UsersTableWrapper() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    const loadUsers = async () => {
-      try {
-        setLoading(true)
-        const usersData = await fetchUsers()
-        
-        if (!usersData.success) {
-          throw new Error(usersData.message)
-        }
-
-        setUsers(usersData.data)
-      } catch (err) {
-        console.error('Failed to fetch users:', err)
-        setError(err instanceof Error ? err.message : 'Failed to load users')
-      } finally {
-        setLoading(false)
+  const loadUsers = async () => {
+    try {
+      setLoading(true)
+      const usersData = await fetchUsers()
+      
+      if (!usersData.success) {
+        throw new Error(usersData.message)
       }
-    }
 
+      setUsers(usersData.data)
+    } catch (err) {
+      console.error('Failed to fetch users:', err)
+      setError(err instanceof Error ? err.message : 'Failed to load users')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
     loadUsers()
   }, [])
+
+  const refreshUsers = () => {
+    loadUsers()
+  }
 
   if (loading) {
     return <DataTableSkeleton />
@@ -56,5 +60,5 @@ export function UsersTableWrapper() {
     )
   }
 
-  return <UsersDataTable data={users} />
+  return <UsersDataTable data={users} onRefresh={refreshUsers} />
 }

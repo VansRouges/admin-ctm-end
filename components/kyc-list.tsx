@@ -142,10 +142,10 @@ export function KYCList({ initialData, initialTotalRecords, initialTotalPages, i
                         <TableCell>
                           <div className="space-y-1">
                             <p className="text-gray-200 font-medium text-sm">
-                              {kyc.userId.firstName} {kyc.userId.lastName}
+                              {kyc.userId?.firstName || 'N/A'} {kyc.userId?.lastName || 'N/A'}
                             </p>
                             <p className="text-xs text-gray-400 truncate max-w-[150px]">
-                              {kyc.userId.email}
+                              {kyc.userId?.email || 'N/A'}
                             </p>
                           </div>
                         </TableCell>

@@ -13,10 +13,11 @@ export const dynamic = 'force-dynamic'
 export default async function KYCPage({
   searchParams,
 }: {
-  searchParams: { status?: string; page?: string }
+  searchParams: Promise<{ status?: string; page?: string }>
 }) {
-  const status = searchParams.status || 'all'
-  const page = parseInt(searchParams.page || '1')
+  const resolvedSearchParams = await searchParams
+  const status = resolvedSearchParams.status || 'all'
+  const page = parseInt(resolvedSearchParams.page || '1')
   
   // Fetch KYC applications from the server
   let kycs: KYC[] = []

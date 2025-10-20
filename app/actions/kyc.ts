@@ -131,7 +131,10 @@ export async function getKYCById(kycId: string): Promise<KYCDetailResponse> {
       throw new Error('No authentication token found');
     }
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/kyc/admin/${kycId}`, {
+    const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/kyc/admin/${kycId}`;
+    console.log('Fetching KYC from URL:', url);
+
+    const response = await fetch(url, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -140,8 +143,13 @@ export async function getKYCById(kycId: string): Promise<KYCDetailResponse> {
       cache: 'no-store',
     });
 
+    console.log('Response status:', response.status);
+    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
     if (!response.ok) {
-      throw new Error(`Failed to fetch KYC: ${response.statusText}`);
+      const errorText = await response.text();
+      console.error('API Error Response:', errorText);
+      throw new Error(`Failed to fetch KYC: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
     const data = await response.json();
@@ -154,7 +162,7 @@ export async function getKYCById(kycId: string): Promise<KYCDetailResponse> {
 
 export async function updateKYCStatus(
   kycId: string, 
-  status: 'approved' | 'rejected' | 'under_review'
+  status: 'approved' | 'rejected' | 'under_review' | 'pending'
 ): Promise<KYCUpdateResponse> {
   try {
     const cookieStore = await cookies();
