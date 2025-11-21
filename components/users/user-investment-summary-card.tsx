@@ -12,8 +12,11 @@ export function UserInvestmentSummaryCard(props: {
   roi: number
 }) {
   const [openDisabledTip, setOpenDisabledTip] = useState(false)
-  console.log("Open Disable Tip:", openDisabledTip)
-  const net = useMemo(() => (props.currentValue - props.totalInvestment), [props.currentValue, props.totalInvestment])
+  const net = useMemo(() => {
+    const current = props.currentValue ?? 0
+    const investment = props.totalInvestment ?? 0
+    return current - investment
+  }, [props.currentValue, props.totalInvestment])
 
   return (
     <Card className="bg-gray-900 border-gray-700 relative">
@@ -41,17 +44,17 @@ export function UserInvestmentSummaryCard(props: {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="space-y-2">
             <p className="text-gray-400 text-sm">Total Investment</p>
-            <p className="text-2xl font-bold text-blue-500">${props.totalInvestment.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-blue-500">${(props.totalInvestment ?? 0).toLocaleString()}</p>
           </div>
           
           <div className="space-y-2">
             <p className="text-gray-400 text-sm">Current Value</p>
-            <p className="text-2xl font-bold text-green-500">${props.currentValue.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-green-500">${(props.currentValue ?? 0).toLocaleString()}</p>
           </div>
           
           <div className="space-y-2">
             <p className="text-gray-400 text-sm">Net Gain/Loss</p>
-            <p className={`text-2xl font-bold ${(net) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+            <p className={`text-2xl font-bold ${net >= 0 ? 'text-green-500' : 'text-red-500'}`}>
               ${net.toLocaleString()}
             </p>
           </div>
@@ -60,8 +63,8 @@ export function UserInvestmentSummaryCard(props: {
         <div className="mt-6 pt-6 border-t border-gray-700">
           <div className="flex items-center justify-between">
             <span className="text-gray-400">Return on Investment (ROI)</span>
-            <span className={`text-xl font-bold ${props.roi >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-              {props.roi.toFixed(2)}%
+            <span className={`text-xl font-bold ${(props.roi ?? 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+              {(props.roi ?? 0).toFixed(2)}%
             </span>
           </div>
         </div>

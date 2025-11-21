@@ -9,12 +9,13 @@ export interface User {
   username: string;
   firstName: string;
   lastName: string;
-  roi: number;
+  roi?: number;
   role: string;
   kycStatus: boolean;
-  currentValue: number;
+  currentValue?: number;
+  accountBalance?: number; // New field from portfolio system
   accountStatus: boolean;
-  totalInvestment: number;
+  totalInvestment?: number;
   createdAt: string;
   updatedAt: string;
   fullName: string;

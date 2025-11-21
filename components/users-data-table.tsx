@@ -142,20 +142,26 @@ export function UsersDataTable({
   {
     accessorKey: "currentValue",
     header: () => <div className="text-right">Current Value</div>,
-    cell: ({ row }) => (
-      <div className="text-right font-medium text-white">
-        ${row.original.currentValue.toLocaleString()}
-      </div>
-    ),
+    cell: ({ row }) => {
+      const value = row.original.accountBalance ?? row.original.currentValue;
+      return (
+        <div className="text-right font-medium text-white">
+          {value != null ? `$${value.toLocaleString()}` : 'N/A'}
+        </div>
+      );
+    },
   },
   {
     accessorKey: "roi",
     header: () => <div className="text-right">ROI (%)</div>,
-    cell: ({ row }) => (
-      <div className="text-right font-medium text-white">
-        {row.original.roi.toFixed(2)}%
-      </div>
-    ),
+    cell: ({ row }) => {
+      const roi = row.original.roi;
+      return (
+        <div className="text-right font-medium text-white">
+          {roi != null ? `${roi.toFixed(2)}%` : 'N/A'}
+        </div>
+      );
+    },
   },
   {
     accessorKey: "accountStatus",

@@ -14,16 +14,20 @@ import { useRouter } from "next/navigation"
 
 export function UserStatsCards(props: {
   userId: string
-  currentValue: number
-  totalInvestment: number
-  roi: number
+  currentValue?: number
+  accountBalance?: number
+  totalInvestment?: number
+  roi?: number
   kycStatus: boolean
 }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
-  const [currentValue, setCurrentValue] = useState<number>(props.currentValue)
-  const [totalInvestment, setTotalInvestment] = useState<number>(props.totalInvestment)
-  const [roi, setRoi] = useState<number>(props.roi)
+  const displayValue = props.accountBalance ?? props.currentValue ?? 0
+  const displayInvestment = props.totalInvestment ?? 0
+  const displayRoi = props.roi ?? 0
+  const [currentValue, setCurrentValue] = useState<number>(displayValue)
+  const [totalInvestment, setTotalInvestment] = useState<number>(displayInvestment)
+  const [roi, setRoi] = useState<number>(displayRoi)
   const [kycStatus, setKycStatus] = useState<boolean>(props.kycStatus)
   const [isPending, startTransition] = useTransition()
 
@@ -45,7 +49,7 @@ export function UserStatsCards(props: {
               Current Value
             </CardDescription>
             <CardTitle className="text-2xl font-bold text-green-500">
-              ${props.currentValue.toLocaleString()}
+              ${displayValue.toLocaleString()}
             </CardTitle>
           </CardHeader>
         </Card>
@@ -57,7 +61,7 @@ export function UserStatsCards(props: {
               Total Investment
             </CardDescription>
             <CardTitle className="text-2xl font-bold text-blue-500">
-              ${props.totalInvestment.toLocaleString()}
+              ${displayInvestment.toLocaleString()}
             </CardTitle>
           </CardHeader>
         </Card>
@@ -68,8 +72,8 @@ export function UserStatsCards(props: {
               <Activity className="h-4 w-4" />
               ROI
             </CardDescription>
-            <CardTitle className={`text-2xl font-bold ${props.roi >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-              {props.roi.toFixed(2)}%
+            <CardTitle className={`text-2xl font-bold ${displayRoi >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+              {displayRoi.toFixed(2)}%
             </CardTitle>
           </CardHeader>
         </Card>
