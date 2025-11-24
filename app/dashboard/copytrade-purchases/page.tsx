@@ -3,6 +3,7 @@ import { AppSidebar } from "@/components/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
 import { getAllCopytradePurchases, type CopytradePurchase } from "@/app/actions/copytrade-purchases"
 import { CopytradePurchasesList } from "@/components/copytrade-purchases-list"
+import { AdminCopytradePurchaseButton } from "@/components/admin-copytrade-purchase-button"
 import { Toaster } from "sonner"
 
 // Force dynamic rendering
@@ -43,6 +44,7 @@ export default async function CopytradePurchasesPage() {
                     Manage and review all copytrade purchase requests
                   </p>
                 </div>
+                <AdminCopytradePurchaseButton />
               </div>
 
               {/* Purchases List */}

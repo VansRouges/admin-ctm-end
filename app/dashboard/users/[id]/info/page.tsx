@@ -26,12 +26,17 @@ import {
 import { 
   UserInvestmentSummaryCard 
 } from "@/components/users/user-investment-summary-card"
+import { 
+  UserActionsSection 
+} from "@/components/users/user-actions-section"
+import { Toaster } from "sonner"
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
 
-export default async function UserInfoPage({ params }: { params: { id: string } }) {
-  const userId = params.id
+export default async function UserInfoPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const userId = id
   
   let user
   try {
@@ -117,6 +122,9 @@ export default async function UserInfoPage({ params }: { params: { id: string } 
                 accountStatus={user.accountStatus}
               />
 
+              {/* User Actions - Deposit & Withdrawal */}
+              <UserActionsSection userId={userId} />
+
               {/* Stats with editable numeric + boolean fields */}
               <UserStatsCards
                 userId={userId}
@@ -156,6 +164,7 @@ export default async function UserInfoPage({ params }: { params: { id: string } 
           </div>
         </div>
       </SidebarInset>
+      <Toaster position="top-right" richColors />
     </SidebarProvider>
   )
 }
