@@ -8,15 +8,15 @@ import { useMemo } from "react"
 
 export function UserInvestmentSummaryCard(props: {
   totalInvestment: number
-  currentValue: number
+  accountBalance: number
   roi: number
 }) {
   const [openDisabledTip, setOpenDisabledTip] = useState(false)
   const net = useMemo(() => {
-    const current = props.currentValue ?? 0
+    const balance = props.accountBalance ?? 0
     const investment = props.totalInvestment ?? 0
-    return current - investment
-  }, [props.currentValue, props.totalInvestment])
+    return balance - investment
+  }, [props.accountBalance, props.totalInvestment])
 
   return (
     <Card className="bg-gray-900 border-gray-700 relative">
@@ -48,8 +48,8 @@ export function UserInvestmentSummaryCard(props: {
           </div>
           
           <div className="space-y-2">
-            <p className="text-gray-400 text-sm">Current Value</p>
-            <p className="text-2xl font-bold text-green-500">${(props.currentValue ?? 0).toLocaleString()}</p>
+            <p className="text-gray-400 text-sm">Account Balance</p>
+            <p className="text-2xl font-bold text-green-500">${(props.accountBalance ?? 0).toLocaleString()}</p>
           </div>
           
           <div className="space-y-2">

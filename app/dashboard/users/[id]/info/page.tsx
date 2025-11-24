@@ -120,7 +120,6 @@ export default async function UserInfoPage({ params }: { params: { id: string } 
               {/* Stats with editable numeric + boolean fields */}
               <UserStatsCards
                 userId={userId}
-                currentValue={user.currentValue}
                 accountBalance={user.accountBalance}
                 totalInvestment={user.totalInvestment}
                 roi={user.roi}
@@ -150,7 +149,7 @@ export default async function UserInfoPage({ params }: { params: { id: string } 
               {/* Investment summary (derived). Pencil present but fields are same as stats; kept view-only here */}
               <UserInvestmentSummaryCard
                 totalInvestment={user.totalInvestment ?? 0}
-                currentValue={user.accountBalance ?? user.currentValue ?? 0}
+                accountBalance={user.accountBalance ?? 0}
                 roi={user.roi ?? 0}
               />
             </div>

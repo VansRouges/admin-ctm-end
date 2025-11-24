@@ -140,10 +140,10 @@ export function UsersDataTable({
     ),
   },
   {
-    accessorKey: "currentValue",
-    header: () => <div className="text-right">Current Value</div>,
+    accessorKey: "accountBalance",
+    header: () => <div className="text-right">Account Balance</div>,
     cell: ({ row }) => {
-      const value = row.original.accountBalance ?? row.original.currentValue;
+      const value = row.original.accountBalance;
       return (
         <div className="text-right font-medium text-white">
           {value != null ? `$${value.toLocaleString()}` : 'N/A'}

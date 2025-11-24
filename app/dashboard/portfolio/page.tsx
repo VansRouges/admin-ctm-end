@@ -4,28 +4,70 @@ import { SiteHeader } from "@/components/site-header"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { TrendingUp, TrendingDown, DollarSign, PieChart } from "lucide-react"
+import { getAllUsersWithPortfolios, getUserAvailableTokens, type UserWithPortfolio, type AvailableToken } from "@/app/actions/portfolio"
+import { UserPortfolioCard } from "@/components/user-portfolio-card"
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
 
-export default function PortfolioPage() {
-  // Dummy portfolio data
-  const portfolioStats = {
-    totalValue: 125430.50,
-    totalGains: 25430.50,
-    gainsPercentage: 25.4,
-    totalInvested: 100000,
-    activeInvestments: 12,
+interface UserWithPortfolioAndTokens extends UserWithPortfolio {
+  availableTokens: AvailableToken[];
+  error?: string;
+}
+
+export default async function PortfolioPage() {
+  // Fetch all users with their portfolios in a single call
+  let usersWithPortfolios: UserWithPortfolio[] = []
+  try {
+    const response = await getAllUsersWithPortfolios()
+    if (response.success) {
+      usersWithPortfolios = response.data
+    }
+  } catch (error) {
+    console.error('Error fetching users with portfolios:', error)
   }
 
-  const portfolioItems = [
-    { id: 1, name: "Bitcoin ETF", value: 45000, invested: 35000, gains: 10000, percentage: 28.6, trend: "up" },
-    { id: 2, name: "Ethereum Staking", value: 32000, invested: 28000, gains: 4000, percentage: 14.3, trend: "up" },
-    { id: 3, name: "DeFi Portfolio", value: 18500, invested: 15000, gains: 3500, percentage: 23.3, trend: "up" },
-    { id: 4, name: "NFT Collection", value: 12000, invested: 10000, gains: 2000, percentage: 20.0, trend: "up" },
-    { id: 5, name: "Altcoin Bundle", value: 8930.50, invested: 7000, gains: 1930.50, percentage: 27.6, trend: "up" },
-    { id: 6, name: "Stable Yield Farm", value: 9000, invested: 5000, gains: 4000, percentage: 80.0, trend: "up" },
-  ]
+  // Fetch available tokens for each user (this is still separate as it's not in the main endpoint)
+  const usersWithPortfoliosAndTokens: UserWithPortfolioAndTokens[] = await Promise.all(
+    usersWithPortfolios.map(async (item) => {
+      let availableTokens: AvailableToken[] = []
+      let error: string | undefined
+
+      try {
+        const tokensResponse = await getUserAvailableTokens(item.user._id)
+        if (tokensResponse.success) {
+          availableTokens = Array.isArray(tokensResponse.data) ? tokensResponse.data : []
+        }
+      } catch (err) {
+        error = err instanceof Error ? err.message : 'Failed to fetch available tokens'
+        console.error(`Error fetching available tokens for user ${item.user._id}:`, err)
+      }
+
+      return {
+        ...item,
+        availableTokens,
+        error
+      }
+    })
+  )
+
+  // Calculate aggregate stats
+  const aggregateStats = usersWithPortfoliosAndTokens.reduce(
+    (acc, item) => {
+      if (item.portfolio) {
+        acc.totalValue += item.portfolio.totalCurrentValue
+        acc.totalInvested += item.portfolio.totalInvestedValue
+        acc.totalProfitLoss += item.portfolio.totalProfitLoss
+        acc.totalHoldings += item.portfolio.holdings.length
+      }
+      return acc
+    },
+    { totalValue: 0, totalInvested: 0, totalProfitLoss: 0, totalHoldings: 0 }
+  )
+
+  const gainsPercentage = aggregateStats.totalInvested > 0
+    ? (aggregateStats.totalProfitLoss / aggregateStats.totalInvested) * 100
+    : 0
 
   return (
     <SidebarProvider
@@ -56,7 +98,7 @@ export default function PortfolioPage() {
                   <CardHeader className="pb-2">
                     <CardDescription className="text-gray-300">Total Portfolio Value</CardDescription>
                     <CardTitle className="text-2xl font-bold text-green-500">
-                      ${portfolioStats.totalValue.toLocaleString()}
+                      ${aggregateStats.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -71,7 +113,7 @@ export default function PortfolioPage() {
                   <CardHeader className="pb-2">
                     <CardDescription className="text-gray-300">Total Invested</CardDescription>
                     <CardTitle className="text-2xl font-bold text-blue-500">
-                      ${portfolioStats.totalInvested.toLocaleString()}
+                      ${aggregateStats.totalInvested.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -85,23 +127,27 @@ export default function PortfolioPage() {
                 <Card className="bg-gray-900 border-gray-700">
                   <CardHeader className="pb-2">
                     <CardDescription className="text-gray-300">Total Gains</CardDescription>
-                    <CardTitle className="text-2xl font-bold text-yellow-500">
-                      ${portfolioStats.totalGains.toLocaleString()}
+                    <CardTitle className={`text-2xl font-bold ${aggregateStats.totalProfitLoss >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                      ${aggregateStats.totalProfitLoss >= 0 ? '+' : ''}{aggregateStats.totalProfitLoss.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-center text-sm text-green-500">
-                      <TrendingUp className="h-4 w-4 mr-1" />
-                      +{portfolioStats.gainsPercentage}%
+                    <div className={`flex items-center text-sm ${gainsPercentage >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                      {gainsPercentage >= 0 ? (
+                        <TrendingUp className="h-4 w-4 mr-1" />
+                      ) : (
+                        <TrendingDown className="h-4 w-4 mr-1" />
+                      )}
+                      {gainsPercentage >= 0 ? '+' : ''}{gainsPercentage.toFixed(2)}%
                     </div>
                   </CardContent>
                 </Card>
 
                 <Card className="bg-gray-900 border-gray-700">
                   <CardHeader className="pb-2">
-                    <CardDescription className="text-gray-300">Active Investments</CardDescription>
+                    <CardDescription className="text-gray-300">Total Holdings</CardDescription>
                     <CardTitle className="text-2xl font-bold text-purple-500">
-                      {portfolioStats.activeInvestments}
+                      {aggregateStats.totalHoldings}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -115,56 +161,48 @@ export default function PortfolioPage() {
                 <Card className="bg-gray-900 border-gray-700">
                   <CardHeader className="pb-2">
                     <CardDescription className="text-gray-300">ROI</CardDescription>
-                    <CardTitle className="text-2xl font-bold text-green-500">
-                      +{portfolioStats.gainsPercentage}%
+                    <CardTitle className={`text-2xl font-bold ${gainsPercentage >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                      {gainsPercentage >= 0 ? '+' : ''}{gainsPercentage.toFixed(2)}%
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-center text-sm text-green-500">
-                      <TrendingUp className="h-4 w-4 mr-1" />
+                    <div className={`flex items-center text-sm ${gainsPercentage >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                      {gainsPercentage >= 0 ? (
+                        <TrendingUp className="h-4 w-4 mr-1" />
+                      ) : (
+                        <TrendingDown className="h-4 w-4 mr-1" />
+                      )}
                       Return Rate
                     </div>
                   </CardContent>
                 </Card>
               </div>
 
-              {/* Portfolio Items */}
+              {/* User Portfolios */}
               <Card className="bg-gray-900 border-gray-700">
                 <CardHeader>
-                  <CardTitle className="text-yellow-500">Investment Breakdown</CardTitle>
+                  <CardTitle className="text-yellow-500">All User Portfolios</CardTitle>
                   <CardDescription className="text-gray-300">
-                    Detailed view of all portfolio positions
+                    Detailed view of all user portfolios, holdings, and available tokens
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {portfolioItems.map((item) => (
-                      <div 
-                        key={item.id}
-                        className="flex items-center justify-between p-4 bg-gray-800 rounded-lg border border-gray-700 hover:border-gray-600 transition-colors"
-                      >
-                        <div className="flex-1">
-                          <h3 className="text-white font-semibold">{item.name}</h3>
-                          <p className="text-sm text-gray-400 mt-1">
-                            Invested: ${item.invested.toLocaleString()}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <div className="text-right">
-                            <p className="text-white font-semibold">
-                              ${item.value.toLocaleString()}
-                            </p>
-                            <p className="text-sm text-green-500 flex items-center justify-end">
-                              <TrendingUp className="h-3 w-3 mr-1" />
-                              +${item.gains.toLocaleString()} ({item.percentage}%)
-                            </p>
-                          </div>
-                          <Badge className="bg-green-500 text-white border-0">
-                            Active
-                          </Badge>
-                        </div>
+                    {usersWithPortfoliosAndTokens.length === 0 ? (
+                      <div className="text-center py-12">
+                        <p className="text-gray-400 text-lg">No users found</p>
                       </div>
-                    ))}
+                    ) : (
+                      usersWithPortfoliosAndTokens.map((item) => (
+                        <UserPortfolioCard
+                          key={item.user._id}
+                          user={item.user}
+                          portfolio={item.portfolio}
+                          availableTokens={item.availableTokens}
+                          error={item.error}
+                        />
+                      ))
+                    )}
                   </div>
                 </CardContent>
               </Card>

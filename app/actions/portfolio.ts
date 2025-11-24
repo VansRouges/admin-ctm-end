@@ -49,6 +49,74 @@ export interface RecalculateBalanceResponse {
   };
 }
 
+export interface UserWithPortfolio {
+  user: {
+    _id: string;
+    email: string;
+    username: string;
+    firstName: string;
+    lastName: string;
+    fullName: string;
+    profilePicture?: string;
+    authProvider?: string;
+    isEmailVerified?: boolean;
+    isActive?: boolean;
+    lastLogin?: string;
+    roi?: number;
+    kycStatus: boolean;
+    accountStatus: boolean;
+    totalInvestment?: number;
+    accountBalance?: number;
+    createdAt: string;
+    updatedAt: string;
+  };
+  portfolio: UserPortfolio;
+}
+
+export interface AllUsersWithPortfoliosResponse {
+  success: boolean;
+  count: number;
+  data: UserWithPortfolio[];
+  message?: string;
+}
+
+/**
+ * Get all users with their portfolio information
+ * This is more efficient than fetching users and portfolios separately
+ */
+export async function getAllUsersWithPortfolios(): Promise<AllUsersWithPortfoliosResponse> {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('token')?.value;
+
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/portfolio/users`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        cache: 'no-store',
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch users with portfolios: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching users with portfolios:', error);
+    throw error;
+  }
+}
+
 /**
  * Get user's complete portfolio with live prices
  */

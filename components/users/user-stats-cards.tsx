@@ -14,7 +14,6 @@ import { useRouter } from "next/navigation"
 
 export function UserStatsCards(props: {
   userId: string
-  currentValue?: number
   accountBalance?: number
   totalInvestment?: number
   roi?: number
@@ -22,10 +21,10 @@ export function UserStatsCards(props: {
 }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
-  const displayValue = props.accountBalance ?? props.currentValue ?? 0
+  const displayValue = props.accountBalance ?? 0
   const displayInvestment = props.totalInvestment ?? 0
   const displayRoi = props.roi ?? 0
-  const [currentValue, setCurrentValue] = useState<number>(displayValue)
+  const [accountBalance, setAccountBalance] = useState<number>(displayValue)
   const [totalInvestment, setTotalInvestment] = useState<number>(displayInvestment)
   const [roi, setRoi] = useState<number>(displayRoi)
   const [kycStatus, setKycStatus] = useState<boolean>(props.kycStatus)
@@ -33,7 +32,7 @@ export function UserStatsCards(props: {
 
   const onSave = () => {
     startTransition(async () => {
-      await updateUser(props.userId, { currentValue, totalInvestment, roi, kycStatus })
+      await updateUser(props.userId, { accountBalance, totalInvestment, roi, kycStatus })
       setOpen(false)
       router.refresh()
     })
@@ -46,7 +45,7 @@ export function UserStatsCards(props: {
           <CardHeader className="pb-2">
             <CardDescription className="text-gray-300 flex items-center gap-2">
               <DollarSign className="h-4 w-4" />
-              Current Value
+              Account Balance
             </CardDescription>
             <CardTitle className="text-2xl font-bold text-green-500">
               ${displayValue.toLocaleString()}
@@ -109,8 +108,8 @@ export function UserStatsCards(props: {
             </DialogHeader>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="currentValue" className="text-white">Current Value</Label>
-                <Input id="currentValue" type="number" value={currentValue} onChange={(e) => setCurrentValue(Number(e.target.value))} />
+                <Label htmlFor="accountBalance" className="text-white">Account Balance</Label>
+                <Input id="accountBalance" type="number" value={accountBalance} onChange={(e) => setAccountBalance(Number(e.target.value))} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="totalInvestment" className="text-white">Total Investment</Label>

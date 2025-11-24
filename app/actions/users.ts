@@ -12,8 +12,7 @@ export interface User {
   roi?: number;
   role: string;
   kycStatus: boolean;
-  currentValue?: number;
-  accountBalance?: number; // New field from portfolio system
+  accountBalance?: number; // Account balance from portfolio system
   accountStatus: boolean;
   totalInvestment?: number;
   createdAt: string;
@@ -39,7 +38,7 @@ export interface UpdateUserRequest {
   isActive?: boolean;
   accountStatus?: boolean;
   totalInvestment?: number;
-  currentValue?: number;
+  accountBalance?: number;
   roi?: number;
 }
 
