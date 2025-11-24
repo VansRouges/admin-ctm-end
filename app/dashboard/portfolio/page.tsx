@@ -4,16 +4,11 @@ import { SiteHeader } from "@/components/site-header"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { TrendingUp, TrendingDown, DollarSign, PieChart } from "lucide-react"
-import { getAllUsersWithPortfolios, getUserAvailableTokens, type UserWithPortfolio, type AvailableToken } from "@/app/actions/portfolio"
+import { getAllUsersWithPortfolios, type UserWithPortfolio } from "@/app/actions/portfolio"
 import { UserPortfolioCard } from "@/components/user-portfolio-card"
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
-
-interface UserWithPortfolioAndTokens extends UserWithPortfolio {
-  availableTokens: AvailableToken[];
-  error?: string;
-}
 
 export default async function PortfolioPage() {
   // Fetch all users with their portfolios in a single call
@@ -27,32 +22,8 @@ export default async function PortfolioPage() {
     console.error('Error fetching users with portfolios:', error)
   }
 
-  // Fetch available tokens for each user (this is still separate as it's not in the main endpoint)
-  const usersWithPortfoliosAndTokens: UserWithPortfolioAndTokens[] = await Promise.all(
-    usersWithPortfolios.map(async (item) => {
-      let availableTokens: AvailableToken[] = []
-      let error: string | undefined
-
-      try {
-        const tokensResponse = await getUserAvailableTokens(item.user._id)
-        if (tokensResponse.success) {
-          availableTokens = Array.isArray(tokensResponse.data) ? tokensResponse.data : []
-        }
-      } catch (err) {
-        error = err instanceof Error ? err.message : 'Failed to fetch available tokens'
-        console.error(`Error fetching available tokens for user ${item.user._id}:`, err)
-      }
-
-      return {
-        ...item,
-        availableTokens,
-        error
-      }
-    })
-  )
-
   // Calculate aggregate stats
-  const aggregateStats = usersWithPortfoliosAndTokens.reduce(
+  const aggregateStats = usersWithPortfolios.reduce(
     (acc, item) => {
       if (item.portfolio) {
         acc.totalValue += item.portfolio.totalCurrentValue
@@ -188,18 +159,17 @@ export default async function PortfolioPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {usersWithPortfoliosAndTokens.length === 0 ? (
+                    {usersWithPortfolios.length === 0 ? (
                       <div className="text-center py-12">
                         <p className="text-gray-400 text-lg">No users found</p>
                       </div>
                     ) : (
-                      usersWithPortfoliosAndTokens.map((item) => (
+                      usersWithPortfolios.map((item) => (
                         <UserPortfolioCard
                           key={item.user._id}
                           user={item.user}
                           portfolio={item.portfolio}
-                          availableTokens={item.availableTokens}
-                          error={item.error}
+                          userId={item.user._id}
                         />
                       ))
                     )}

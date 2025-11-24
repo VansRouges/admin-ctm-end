@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { ChevronDown, ChevronRight, User, TrendingUp, TrendingDown, Coins } from "lucide-react"
-import { UserPortfolio, AvailableToken } from "@/app/actions/portfolio"
+import { ChevronDown, ChevronRight, User, TrendingUp, TrendingDown, Coins, Loader2 } from "lucide-react"
+import { UserPortfolio, AvailableToken, getUserAvailableTokens } from "@/app/actions/portfolio"
 import {
   Table,
   TableBody,
@@ -23,15 +23,41 @@ interface UserPortfolioCardProps {
     fullName: string;
   };
   portfolio: UserPortfolio | null;
-  availableTokens: AvailableToken[];
-  error?: string;
+  userId: string;
 }
 
-export function UserPortfolioCard({ user, portfolio, availableTokens, error }: UserPortfolioCardProps) {
+export function UserPortfolioCard({ user, portfolio, userId }: UserPortfolioCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
+  const [availableTokens, setAvailableTokens] = useState<AvailableToken[]>([])
+  const [isLoadingTokens, setIsLoadingTokens] = useState(false)
+  const [tokensError, setTokensError] = useState<string | undefined>()
+
+  // Fetch available tokens only when card is expanded
+  useEffect(() => {
+    if (isExpanded && availableTokens.length === 0 && !isLoadingTokens && !tokensError) {
+      setIsLoadingTokens(true)
+      setTokensError(undefined)
+      getUserAvailableTokens(userId)
+        .then((response) => {
+          if (response.success) {
+            setAvailableTokens(Array.isArray(response.data) ? response.data : [])
+          } else {
+            setTokensError('Failed to fetch available tokens')
+          }
+        })
+        .catch((err) => {
+          const errorMessage = err instanceof Error ? err.message : 'Failed to fetch available tokens'
+          setTokensError(errorMessage)
+          console.error(`Error fetching available tokens for user ${userId}:`, err)
+        })
+        .finally(() => {
+          setIsLoadingTokens(false)
+        })
+    }
+  }, [isExpanded, userId, availableTokens.length, isLoadingTokens, tokensError])
 
   const displayName = user.fullName || user.username
-  const hasPortfolio = portfolio !== null && !error
+  const hasPortfolio = portfolio !== null
   const totalValue = portfolio?.totalCurrentValue ?? 0
   const totalInvested = portfolio?.totalInvestedValue ?? 0
   const profitLoss = portfolio?.totalProfitLoss ?? 0
@@ -101,7 +127,7 @@ export function UserPortfolioCard({ user, portfolio, availableTokens, error }: U
               </>
             ) : (
               <Badge variant="secondary" className="bg-gray-700 text-gray-300">
-                {error ? 'Error' : 'No Portfolio'}
+                No Portfolio
               </Badge>
             )}
           </div>
@@ -109,12 +135,6 @@ export function UserPortfolioCard({ user, portfolio, availableTokens, error }: U
 
         {isExpanded && (
           <div className="mt-4 space-y-4 pt-4 border-t border-gray-700">
-            {error && (
-              <div className="bg-red-900/20 border border-red-500/50 rounded p-3">
-                <p className="text-red-400 text-sm">{error}</p>
-              </div>
-            )}
-
             {hasPortfolio && (
               <>
                 {/* Holdings Table */}
@@ -198,12 +218,21 @@ export function UserPortfolioCard({ user, portfolio, availableTokens, error }: U
                 )}
 
                 {/* Available Tokens */}
-                {availableTokens.length > 0 ? (
-                  <div>
-                    <h4 className="text-white font-semibold mb-3 flex items-center gap-2">
-                      <Coins className="h-4 w-4" />
-                      Available Tokens ({availableTokens.length})
-                    </h4>
+                <div>
+                  <h4 className="text-white font-semibold mb-3 flex items-center gap-2">
+                    <Coins className="h-4 w-4" />
+                    Available Tokens
+                  </h4>
+                  {isLoadingTokens ? (
+                    <div className="bg-gray-900/50 rounded p-4 flex items-center justify-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                      <p className="text-gray-400 text-sm">Loading available tokens...</p>
+                    </div>
+                  ) : tokensError ? (
+                    <div className="bg-red-900/20 border border-red-500/50 rounded p-3">
+                      <p className="text-red-400 text-sm">{tokensError}</p>
+                    </div>
+                  ) : availableTokens.length > 0 ? (
                     <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
@@ -230,12 +259,12 @@ export function UserPortfolioCard({ user, portfolio, availableTokens, error }: U
                         </TableBody>
                       </Table>
                     </div>
-                  </div>
-                ) : (
-                  <div className="bg-gray-900/50 rounded p-4">
-                    <p className="text-gray-400 text-sm">No available tokens for this user</p>
-                  </div>
-                )}
+                  ) : (
+                    <div className="bg-gray-900/50 rounded p-4">
+                      <p className="text-gray-400 text-sm">No available tokens for this user</p>
+                    </div>
+                  )}
+                </div>
               </>
             )}
           </div>
