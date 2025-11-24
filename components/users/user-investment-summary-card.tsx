@@ -3,7 +3,6 @@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { TrendingUp, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { useState } from "react"
 import { useMemo } from "react"
 
 export function UserInvestmentSummaryCard(props: {
@@ -11,7 +10,6 @@ export function UserInvestmentSummaryCard(props: {
   accountBalance: number
   roi: number
 }) {
-  const [openDisabledTip, setOpenDisabledTip] = useState(false)
   const net = useMemo(() => {
     const balance = props.accountBalance ?? 0
     const investment = props.totalInvestment ?? 0
@@ -26,7 +24,6 @@ export function UserInvestmentSummaryCard(props: {
           size="icon"
           className="text-gray-300 hover:text-white"
           title="Edit values in the Stats section"
-          onClick={() => setOpenDisabledTip((v) => !v)}
         >
           <Pencil className="h-5 w-5" />
         </Button>

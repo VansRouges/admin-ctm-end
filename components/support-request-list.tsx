@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { getSupportTickets, updateSupportTicketStatus, deleteSupportTicket, type SupportTicket } from "@/app/actions/support"
 import { PriorityBadge } from "./priority-badge"
 import { Badge } from "@/components/ui/badge"
@@ -31,23 +31,6 @@ export function AdminSupportRequestList({ initialData }: AdminSupportRequestList
     const startIndex = (currentPage - 1) * itemsPerPage
     const endIndex = startIndex + itemsPerPage
     const currentRequests = requests.slice(startIndex, endIndex)
-
-    const fetchRequests = async () => {
-        setIsLoading(true)
-        try {
-            const response = await getSupportTickets()
-            if (response.success) {
-                setRequests(response.data)
-            } else {
-                toast.error("Failed to fetch support tickets")
-            }
-        } catch (error) {
-            console.error("Error fetching support tickets:", error)
-            toast.error("Error fetching support tickets")
-        } finally {
-            setIsLoading(false)
-        }
-    }
 
     const handleRequestClick = (request: SupportTicket) => {
         setSelectedRequest(request)
@@ -123,21 +106,6 @@ export function AdminSupportRequestList({ initialData }: AdminSupportRequestList
                 return 'outline'
             default:
                 return 'outline'
-        }
-    }
-
-    const getStatusLabel = (status: string) => {
-        switch (status) {
-            case 'in_progress':
-                return 'In Progress'
-            case 'open':
-                return 'Open'
-            case 'resolved':
-                return 'Resolved'
-            case 'closed':
-                return 'Closed'
-            default:
-                return status
         }
     }
 

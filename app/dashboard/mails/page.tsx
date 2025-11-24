@@ -4,7 +4,6 @@ import { SiteHeader } from "@/components/site-header"
 import { Toaster } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
 import { emailTemplates } from "@/lib/emailTemplates"
 import { EmailTemplateCard } from "@/components/EmailTemplateCard"
 import { getEmails, type Email } from "@/app/actions/emails"

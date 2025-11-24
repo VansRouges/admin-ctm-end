@@ -1,11 +1,9 @@
 "use client"
 
 import {
-  IconCreditCard,
   IconDotsVertical,
   IconLogout,
   IconNotification,
-  IconUserCircle,
 } from "@tabler/icons-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"

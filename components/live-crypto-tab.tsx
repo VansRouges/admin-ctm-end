@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { IconChevronDown, IconChevronRight, IconChevronsRight } from "@tabler/icons-react";
+import { IconChevronDown, IconChevronsRight } from "@tabler/icons-react";
 
 export default function LiveCryptoTab() {
   const [loading, setLoading] = useState(true);

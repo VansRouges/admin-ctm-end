@@ -6,8 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
-import { Separator } from "@/components/ui/separator"
-import { SidebarTrigger } from "@/components/ui/sidebar"
 import { User, Mail, Phone, Calendar, MapPin, FileText, CheckCircle, XCircle, ExternalLink } from "lucide-react"
 import { toast } from "sonner"
 import { updateKYCStatus, KYC } from "@/app/actions/kyc"
