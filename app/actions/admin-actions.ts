@@ -225,7 +225,7 @@ export async function createAdminCopytradePurchase(
     }
 
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/copytrade-purchase/admin`,
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/copytrade-purchases/admin`,
       {
         method: 'POST',
         headers: {

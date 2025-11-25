@@ -7,9 +7,18 @@ export interface CopytradePurchaseUser {
   email: string;
 }
 
+export interface UserDetails {
+  _id: string;
+  username: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+}
+
 export interface CopytradePurchase {
   _id: string;
   user: string | CopytradePurchaseUser;
+  userDetails?: UserDetails;
   copytradeOption?: string;
   trade_title: string;
   initial_investment: number;
@@ -63,6 +72,17 @@ export interface DeleteCopytradePurchaseResponse {
   success: boolean;
   message: string;
   data?: CopytradePurchase;
+}
+
+export interface EndCopytradePurchaseResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    purchase: CopytradePurchase;
+    finalValue?: number;
+    finalROI?: number;
+    newAccountBalance?: number;
+  };
 }
 
 /**
@@ -260,6 +280,50 @@ export async function deleteCopytradePurchase(purchaseId: string): Promise<Delet
     return data;
   } catch (error) {
     console.error('Error deleting copytrade purchase:', error);
+    throw error;
+  }
+}
+
+/**
+ * End/Stop an active copytrade purchase
+ * Only works for active trades. Calculates final ROI based on risk level and completes the trade.
+ */
+export async function endCopytradePurchase(purchaseId: string): Promise<EndCopytradePurchaseResponse> {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('token')?.value;
+
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/copytrade-purchases/${purchaseId}/end`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      let errorMessage = response.statusText;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorData.error || response.statusText;
+      } catch {
+        // If JSON parsing fails, use statusText
+        errorMessage = response.statusText;
+      }
+      throw new Error(`Failed to end copytrade purchase: ${errorMessage}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error ending copytrade purchase:', error);
     throw error;
   }
 }

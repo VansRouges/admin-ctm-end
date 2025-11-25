@@ -34,13 +34,15 @@ import {
   XCircle, 
   Trash2, 
   Filter,
-  User
+  User,
+  StopCircle
 } from "lucide-react"
 import { toast } from "sonner"
 import {
   getAllCopytradePurchases,
   updateCopytradePurchase,
   deleteCopytradePurchase,
+  endCopytradePurchase,
   type CopytradePurchase,
 } from "@/app/actions/copytrade-purchases"
 import { useTransition } from "react"
@@ -60,6 +62,8 @@ export function CopytradePurchasesList({ initialPurchases }: CopytradePurchasesL
   const [purchaseToApprove, setPurchaseToApprove] = useState<CopytradePurchase | null>(null)
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false)
   const [purchaseToReject, setPurchaseToReject] = useState<CopytradePurchase | null>(null)
+  const [endTradeDialogOpen, setEndTradeDialogOpen] = useState(false)
+  const [purchaseToEnd, setPurchaseToEnd] = useState<CopytradePurchase | null>(null)
 
   const handleFilterChange = useCallback(async (value: string) => {
     setStatusFilter(value)
@@ -149,6 +153,29 @@ export function CopytradePurchasesList({ initialPurchases }: CopytradePurchasesL
     })
   }, [purchaseToDelete, router])
 
+  const handleEndTrade = useCallback(async () => {
+    if (!purchaseToEnd) return
+
+    startTransition(async () => {
+      try {
+        const response = await endCopytradePurchase(purchaseToEnd._id)
+
+        if (response.success) {
+          toast.success('Trade ended successfully')
+          setEndTradeDialogOpen(false)
+          setPurchaseToEnd(null)
+          router.refresh()
+        } else {
+          toast.error(response.message || 'Failed to end trade')
+        }
+      } catch (error) {
+        console.error('Error ending trade:', error)
+        const errorMessage = error instanceof Error ? error.message : 'Failed to end trade'
+        toast.error(errorMessage)
+      }
+    })
+  }, [purchaseToEnd, router])
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
@@ -174,14 +201,24 @@ export function CopytradePurchasesList({ initialPurchases }: CopytradePurchasesL
     })
   }
 
-  const getUserEmail = (user: string | { _id: string; email: string }) => {
-    if (typeof user === 'string') return 'N/A'
-    return user.email || 'N/A'
+  const getUserEmail = (purchase: CopytradePurchase) => {
+    if (purchase.userDetails?.email) return purchase.userDetails.email
+    if (typeof purchase.user === 'string') return 'N/A'
+    return purchase.user.email || 'N/A'
   }
 
-  const getUserDisplay = (user: string | { _id: string; email: string }) => {
-    if (typeof user === 'string') return user
-    return user.email || user._id
+  const getUserDisplay = (purchase: CopytradePurchase) => {
+    // Prefer userDetails if available (new format with username, firstName, lastName)
+    if (purchase.userDetails) {
+      const { firstName, lastName, username } = purchase.userDetails
+      if (firstName || lastName) {
+        return `${firstName || ''} ${lastName || ''}`.trim() || username
+      }
+      return username
+    }
+    // Fallback to old format
+    if (typeof purchase.user === 'string') return purchase.user
+    return purchase.user.email || purchase.user._id
   }
 
   return (
@@ -253,8 +290,8 @@ export function CopytradePurchasesList({ initialPurchases }: CopytradePurchasesL
                         <div className="flex items-center gap-2">
                           <User className="h-4 w-4 text-gray-400" />
                           <div>
-                            <p className="text-white text-sm">{getUserDisplay(purchase.user)}</p>
-                            <p className="text-xs text-gray-400">{getUserEmail(purchase.user)}</p>
+                            <p className="text-white text-sm">{getUserDisplay(purchase)}</p>
+                            <p className="text-xs text-gray-400">{getUserEmail(purchase)}</p>
                           </div>
                         </div>
                       </TableCell>
@@ -318,6 +355,21 @@ export function CopytradePurchasesList({ initialPurchases }: CopytradePurchasesL
                               </Button>
                             </>
                           )}
+                          {purchase.trade_status === 'active' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setPurchaseToEnd(purchase)
+                                setEndTradeDialogOpen(true)
+                              }}
+                              disabled={isPending}
+                              className="bg-orange-500 hover:bg-orange-600 text-white border-0"
+                            >
+                              <StopCircle className="h-4 w-4 mr-1" />
+                              End Trade
+                            </Button>
+                          )}
                           <Button
                             variant="outline"
                             size="sm"
@@ -354,7 +406,7 @@ export function CopytradePurchasesList({ initialPurchases }: CopytradePurchasesL
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-400">User:</span>
-                <span className="text-white">{getUserEmail(purchaseToApprove.user)}</span>
+                <span className="text-white">{getUserEmail(purchaseToApprove)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">Trade:</span>
@@ -394,7 +446,7 @@ export function CopytradePurchasesList({ initialPurchases }: CopytradePurchasesL
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-400">User:</span>
-                <span className="text-white">{getUserEmail(purchaseToReject.user)}</span>
+                <span className="text-white">{getUserEmail(purchaseToReject)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">Trade:</span>
@@ -434,7 +486,7 @@ export function CopytradePurchasesList({ initialPurchases }: CopytradePurchasesL
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-400">User:</span>
-                <span className="text-white">{getUserEmail(purchaseToDelete.user)}</span>
+                <span className="text-white">{getUserEmail(purchaseToDelete)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">Trade:</span>
@@ -456,6 +508,60 @@ export function CopytradePurchasesList({ initialPurchases }: CopytradePurchasesL
               disabled={isPending}
             >
               {isPending ? 'Deleting...' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* End Trade Confirmation Dialog */}
+      <Dialog open={endTradeDialogOpen} onOpenChange={setEndTradeDialogOpen}>
+        <DialogContent className="bg-gray-900 border-gray-700">
+          <DialogHeader>
+            <DialogTitle className="text-white">End Copytrade Purchase</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Are you sure you want to end this active trade? This will calculate the final ROI based on the risk level, complete the trade, and add the final value to the user&apos;s account balance as USDT.
+            </DialogDescription>
+          </DialogHeader>
+          {purchaseToEnd && (
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-400">User:</span>
+                <span className="text-white">{getUserDisplay(purchaseToEnd)} ({getUserEmail(purchaseToEnd)})</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Trade:</span>
+                <span className="text-white">{purchaseToEnd.trade_title}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Initial Investment:</span>
+                <span className="text-white">${purchaseToEnd.initial_investment.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Current Value:</span>
+                <span className="text-white">
+                  {purchaseToEnd.trade_current_value != null 
+                    ? `$${purchaseToEnd.trade_current_value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                    : 'N/A'}
+                </span>
+              </div>
+              {purchaseToEnd.trade_roi_min != null && purchaseToEnd.trade_roi_max != null && (
+                <div className="flex justify-between">
+                  <span className="text-gray-400">ROI Range:</span>
+                  <span className="text-white">{purchaseToEnd.trade_roi_min}% - {purchaseToEnd.trade_roi_max}%</span>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setEndTradeDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleEndTrade}
+              disabled={isPending}
+              className="bg-orange-500 hover:bg-orange-600 text-white"
+            >
+              {isPending ? 'Ending Trade...' : 'End Trade'}
             </Button>
           </DialogFooter>
         </DialogContent>
