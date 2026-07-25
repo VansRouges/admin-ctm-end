@@ -158,6 +158,8 @@ export default async function UserInfoPage({ params }: { params: Promise<{ id: s
               <UserInvestmentSummaryCard
                 totalInvestment={user.totalInvestment ?? 0}
                 accountBalance={user.accountBalance ?? 0}
+                currentValue={user.currentValue ?? 0}
+                lifetimeWithdrawals={user.lifetimeWithdrawals ?? 0}
                 roi={user.roi ?? 0}
               />
             </div>

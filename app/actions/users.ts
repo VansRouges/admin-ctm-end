@@ -12,7 +12,9 @@ export interface User {
   roi?: number;
   role: string;
   kycStatus: boolean;
-  accountBalance?: number; // Account balance from portfolio system
+  accountBalance?: number;
+  currentValue?: number;
+  lifetimeWithdrawals?: number;
   accountStatus: boolean;
   totalInvestment?: number;
   createdAt: string;
