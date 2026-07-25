@@ -12,13 +12,17 @@ export const dynamic = 'force-dynamic'
 export default async function PortfolioPage() {
   // Fetch all users with their portfolios in a single call
   let usersWithPortfolios: UserWithPortfolio[] = []
+  let fetchError: string | null = null
   try {
     const response = await getAllUsersWithPortfolios()
     if (response.success) {
       usersWithPortfolios = response.data
+    } else {
+      fetchError = 'Failed to load portfolios from the API.'
     }
   } catch (error) {
     console.error('Error fetching users with portfolios:', error)
+    fetchError = error instanceof Error ? error.message : 'Failed to load portfolios from the API.'
   }
 
   // Calculate aggregate stats
@@ -158,7 +162,12 @@ export default async function PortfolioPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {usersWithPortfolios.length === 0 ? (
+                    {fetchError ? (
+                      <div className="text-center py-12 space-y-2">
+                        <p className="text-red-400 text-lg">Could not load portfolios</p>
+                        <p className="text-gray-400 text-sm">{fetchError}</p>
+                      </div>
+                    ) : usersWithPortfolios.length === 0 ? (
                       <div className="text-center py-12">
                         <p className="text-gray-400 text-lg">No users found</p>
                       </div>

@@ -11,6 +11,7 @@ import {
   IconUserCheck,
   IconHelp,
   IconShoppingCart,
+  IconChartCandle,
 } from "@tabler/icons-react"
 
 import { NavDocuments } from "@/components/nav-documents"
@@ -52,6 +53,11 @@ const data = {
       title: "Copytrade Purchases",
       url: "/dashboard/copytrade-purchases",
       icon: IconShoppingCart,
+    },
+    {
+      title: "Stock Purchases",
+      url: "/dashboard/stock-purchases",
+      icon: IconChartCandle,
     },
     {
       title: "Manage",
