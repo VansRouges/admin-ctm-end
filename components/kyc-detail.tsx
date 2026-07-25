@@ -6,6 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
 import { User, Mail, Phone, Calendar, MapPin, FileText, CheckCircle, XCircle, ExternalLink } from "lucide-react"
 import { toast } from "sonner"
 import { updateKYCStatus, KYC } from "@/app/actions/kyc"
@@ -17,24 +19,40 @@ interface KYCDetailProps {
 export function KYCDetail({ kyc }: KYCDetailProps) {
   const router = useRouter()
   const [isUpdating, setIsUpdating] = useState(false)
+  const [rejectOpen, setRejectOpen] = useState(false)
+  const [rejectionReason, setRejectionReason] = useState("")
 
-  const handleStatusUpdate = async (newStatus: 'approved' | 'rejected' | 'under_review' | 'pending') => {
+  const handleStatusUpdate = async (
+    newStatus: 'approved' | 'rejected' | 'under_review' | 'pending',
+    options?: { rejectionReason?: string }
+  ) => {
     try {
       setIsUpdating(true)
-      const result = await updateKYCStatus(kyc._id, newStatus)
+      const result = await updateKYCStatus(kyc._id, newStatus, options)
       
       if (result.success) {
         toast.success(`KYC status updated to ${newStatus.replace('_', ' ')} successfully`)
+        setRejectOpen(false)
+        setRejectionReason("")
         router.refresh()
       } else {
         toast.error(result.message || 'Failed to update KYC status')
       }
     } catch (error) {
       console.error('Error updating KYC status:', error)
-      toast.error('An error occurred while updating KYC status')
+      toast.error(error instanceof Error ? error.message : 'An error occurred while updating KYC status')
     } finally {
       setIsUpdating(false)
     }
+  }
+
+  const confirmReject = async () => {
+    const reason = rejectionReason.trim()
+    if (!reason) {
+      toast.error('A rejection reason is required')
+      return
+    }
+    await handleStatusUpdate('rejected', { rejectionReason: reason })
   }
 
   const getStatusBadge = (status: string) => {
@@ -111,7 +129,7 @@ export function KYCDetail({ kyc }: KYCDetailProps) {
               
               {kyc.status !== 'rejected' && (
                 <Button
-                  onClick={() => handleStatusUpdate('rejected')}
+                  onClick={() => setRejectOpen(true)}
                   disabled={isUpdating}
                   variant="destructive"
                   className="bg-red-500 hover:bg-red-600"
@@ -352,6 +370,40 @@ export function KYCDetail({ kyc }: KYCDetailProps) {
           </div>
         </div>
       </div>
+
+      <Dialog open={rejectOpen} onOpenChange={setRejectOpen}>
+        <DialogContent className="bg-gray-900 border-gray-700">
+          <DialogHeader>
+            <DialogTitle className="text-white">Reject KYC Application</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="rejectionReason" className="text-white">
+              Rejection reason (required)
+            </Label>
+            <textarea
+              id="rejectionReason"
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              rows={4}
+              className="w-full rounded-md border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-white"
+              placeholder="Explain what the user needs to fix before resubmitting"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setRejectOpen(false)} disabled={isUpdating}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmReject}
+              disabled={isUpdating}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              {isUpdating ? 'Rejecting...' : 'Confirm Reject'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

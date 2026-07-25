@@ -162,7 +162,8 @@ export async function getKYCById(kycId: string): Promise<KYCDetailResponse> {
 
 export async function updateKYCStatus(
   kycId: string, 
-  status: 'approved' | 'rejected' | 'under_review' | 'pending'
+  status: 'approved' | 'rejected' | 'under_review' | 'pending',
+  options?: { rejectionReason?: string; reviewNotes?: string }
 ): Promise<KYCUpdateResponse> {
   try {
     const cookieStore = await cookies();
@@ -178,11 +179,16 @@ export async function updateKYCStatus(
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({
+        status,
+        rejectionReason: options?.rejectionReason,
+        reviewNotes: options?.reviewNotes,
+      }),
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to update KYC status: ${response.statusText}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Failed to update KYC status: ${response.statusText}`);
     }
 
     const data = await response.json();

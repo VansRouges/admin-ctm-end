@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
 import { DollarSign, TrendingUp, Activity, Shield, Pencil } from "lucide-react"
 import { useState, useTransition } from "react"
 import { updateUser } from "@/app/actions/users"
@@ -27,12 +26,11 @@ export function UserStatsCards(props: {
   const [accountBalance, setAccountBalance] = useState<number>(displayValue)
   const [totalInvestment, setTotalInvestment] = useState<number>(displayInvestment)
   const [roi, setRoi] = useState<number>(displayRoi)
-  const [kycStatus, setKycStatus] = useState<boolean>(props.kycStatus)
   const [isPending, startTransition] = useTransition()
 
   const onSave = () => {
     startTransition(async () => {
-      await updateUser(props.userId, { accountBalance, totalInvestment, roi, kycStatus })
+      await updateUser(props.userId, { accountBalance, totalInvestment, roi })
       setOpen(false)
       router.refresh()
     })
@@ -119,9 +117,10 @@ export function UserStatsCards(props: {
                 <Label htmlFor="roi" className="text-white">ROI (%)</Label>
                 <Input id="roi" type="number" step="0.01" value={roi} onChange={(e) => setRoi(Number(e.target.value))} />
               </div>
-              <div className="space-y-2 flex items-center gap-2">
-                <Checkbox id="kycStatus" checked={kycStatus} onCheckedChange={(v) => setKycStatus(Boolean(v))} />
-                <Label htmlFor="kycStatus" className="text-white">KYC Verified</Label>
+              <div className="space-y-2 md:col-span-2">
+                <p className="text-sm text-gray-400">
+                  KYC status can only be changed from the KYC review page.
+                </p>
               </div>
             </div>
             <div className="flex justify-end gap-2">
