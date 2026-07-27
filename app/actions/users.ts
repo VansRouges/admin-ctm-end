@@ -40,7 +40,7 @@ export interface UpdateUserRequest {
   isActive?: boolean;
   accountStatus?: boolean;
   totalInvestment?: number;
-  accountBalance?: number;
+  /** Prefer updateUserFinancials() for durable balance/equity edits. */
   roi?: number;
 }
 
