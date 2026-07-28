@@ -40,6 +40,8 @@ export interface UpdateUserRequest {
   isActive?: boolean;
   accountStatus?: boolean;
   totalInvestment?: number;
+  accountBalance?: number;
+  currentValue?: number;
   /** Prefer updateUserFinancials() for durable balance/equity edits. */
   roi?: number;
 }
@@ -48,6 +50,28 @@ export interface UpdateUserResponse {
   success: boolean;
   message: string;
   data: User;
+  financialSummary?: {
+    totalInvestment: number;
+    accountBalance: number;
+    lockedValue: number;
+    currentValue: number;
+    lifetimeWithdrawals: number;
+    roi: number;
+    netGainLoss?: number;
+  };
+  portfolioAdjustments?: Array<{
+    action: string;
+    tokenName: string;
+    tokenAmount: number;
+    usdValue: number;
+  }>;
+  error?: string;
+  errorData?: {
+    accountBalance?: number;
+    currentValue?: number;
+    lockedValue?: number;
+    expectedCurrentValue?: number;
+  };
 }
 
 export interface DeleteUserResponse {
@@ -92,7 +116,20 @@ export async function fetchUsers(): Promise<UsersResponse> {
   }
 }
 
-export async function fetchUserById(userId: string): Promise<User> {
+export interface FetchUserByIdResult {
+  user: User;
+  financialSummary?: {
+    totalInvestment: number;
+    accountBalance: number;
+    lockedValue: number;
+    currentValue: number;
+    lifetimeWithdrawals: number;
+    roi: number;
+    netGainLoss?: number;
+  };
+}
+
+export async function fetchUserById(userId: string): Promise<FetchUserByIdResult> {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get('token')?.value;
@@ -114,7 +151,10 @@ export async function fetchUserById(userId: string): Promise<User> {
     }
 
     const data = await response.json();
-    return data.data;
+    return {
+      user: data.data,
+      financialSummary: data.financialSummary,
+    };
   } catch (error) {
     console.error('Error fetching user:', error);
     throw error;

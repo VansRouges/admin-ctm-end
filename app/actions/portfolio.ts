@@ -278,6 +278,7 @@ export interface UpdateUserFinancialResponse {
 /**
  * Admin: get user's equity summary (available, locked, current, ROI)
  * GET /api/v1/portfolio/user/:userId/financial-summary
+ * Falls back to GET /api/v1/users/:userId (financialSummary) when portfolio route is unavailable.
  */
 export async function getUserFinancialSummary(
   userId: string
@@ -290,19 +291,41 @@ export async function getUserFinancialSummary(
       return { success: false, message: 'No authentication token found' };
     }
 
+    const headers = {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    };
+
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/portfolio/user/${userId}/financial-summary`,
       {
         method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+        headers,
         cache: 'no-store',
       }
     );
 
     const result = await response.json().catch(() => ({}));
+
+    if (response.status === 404) {
+      const userResponse = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/users/${userId}`,
+        {
+          method: 'GET',
+          headers,
+          cache: 'no-store',
+        }
+      );
+      const userResult = await userResponse.json().catch(() => ({}));
+      if (userResponse.ok && userResult.financialSummary) {
+        return { success: true, data: userResult.financialSummary };
+      }
+      return {
+        success: false,
+        message: userResult.message || 'Failed to fetch financial summary',
+        error: userResult.error,
+      };
+    }
 
     if (!response.ok || !result.success) {
       return {
@@ -325,6 +348,7 @@ export async function getUserFinancialSummary(
 /**
  * Admin: set accountBalance and/or currentValue (portfolio-backed, durable through sync)
  * PUT /api/v1/portfolio/user/:userId/financial
+ * Falls back to PUT /api/v1/users/:userId when portfolio route is unavailable.
  */
 export async function updateUserFinancials(
   userId: string,
@@ -346,19 +370,49 @@ export async function updateUserFinancials(
       };
     }
 
+    const headers = {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    };
+
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/portfolio/user/${userId}/financial`,
       {
         method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(payload),
       }
     );
 
     const result = await response.json().catch(() => ({}));
+
+    if (response.status === 404) {
+      const userResponse = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/users/${userId}`,
+        {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify(payload),
+        }
+      );
+      const userResult = await userResponse.json().catch(() => ({}));
+
+      if (!userResponse.ok || !userResult.success) {
+        return {
+          success: false,
+          message: userResult.message || `Failed to update financial metrics: ${userResponse.statusText}`,
+          error: userResult.error,
+          errorData: userResult.data,
+        };
+      }
+
+      return {
+        success: true,
+        message: userResult.message || 'Financial metrics updated successfully',
+        data: userResult.financialSummary,
+        portfolioAdjustments: userResult.portfolioAdjustments,
+      };
+    }
 
     if (!response.ok || !result.success) {
       return {

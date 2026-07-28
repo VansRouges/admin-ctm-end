@@ -10,7 +10,6 @@ import {
   BreadcrumbSeparator 
 } from "@/components/ui/breadcrumb"
 import { fetchUserById } from "@/app/actions/users"
-import { getUserFinancialSummary } from "@/app/actions/portfolio"
 import Link from "next/link"
 import { 
   UserHeaderSection 
@@ -40,8 +39,11 @@ export default async function UserInfoPage({ params }: { params: Promise<{ id: s
   const userId = id
   
   let user
+  let financial
   try {
-    user = await fetchUserById(userId)
+    const result = await fetchUserById(userId)
+    user = result.user
+    financial = result.financialSummary
   } catch (error) {
     console.error('Error fetching user:', error)
     return (
@@ -61,7 +63,7 @@ export default async function UserInfoPage({ params }: { params: Promise<{ id: s
               <div className="text-center">
                 <h1 className="text-2xl font-bold text-red-500">Error Loading User</h1>
                 <p className="text-gray-400 mt-2">Could not load user information. Please try again.</p>
-                <Link href="/dashboard/manage" className="text-yellow-500 hover:underline mt-4 inline-block">
+                <Link href="/dashboard" className="text-yellow-500 hover:underline mt-4 inline-block">
                   Back to Users
                 </Link>
               </div>
@@ -74,8 +76,6 @@ export default async function UserInfoPage({ params }: { params: Promise<{ id: s
 
   const displayName = user.fullName || `${user.firstName} ${user.lastName}`.trim() || user.username
 
-  const financialSummaryResult = await getUserFinancialSummary(userId)
-  const financial = financialSummaryResult.success ? financialSummaryResult.data : undefined
   const accountBalance = financial?.accountBalance ?? user.accountBalance ?? 0
   const currentValue = financial?.currentValue ?? user.currentValue ?? accountBalance
   const lockedValue =
@@ -113,7 +113,7 @@ export default async function UserInfoPage({ params }: { params: Promise<{ id: s
                   <BreadcrumbSeparator />
                   <BreadcrumbItem>
                     <BreadcrumbLink asChild>
-                      <Link href="/dashboard/manage" className="text-gray-400 hover:text-yellow-500">
+                      <Link href="/dashboard" className="text-gray-400 hover:text-yellow-500">
                         Users
                       </Link>
                     </BreadcrumbLink>
@@ -137,9 +137,8 @@ export default async function UserInfoPage({ params }: { params: Promise<{ id: s
               {/* User Actions - Deposit & Withdrawal */}
               <UserActionsSection userId={userId} />
 
-              {/* Stats with editable financial metrics (via portfolio financial endpoint) */}
+              {/* Stats overview */}
               <UserStatsCards
-                userId={userId}
                 accountBalance={accountBalance}
                 currentValue={currentValue}
                 lockedValue={lockedValue}
@@ -168,8 +167,9 @@ export default async function UserInfoPage({ params }: { params: Promise<{ id: s
                 />
               </div>
 
-              {/* Investment summary — edit financials from Stats pencil */}
+              {/* Investment summary — pencil edits account balance & current value */}
               <UserInvestmentSummaryCard
+                userId={userId}
                 totalInvestment={totalInvestment}
                 accountBalance={accountBalance}
                 currentValue={currentValue}
