@@ -225,3 +225,163 @@ export async function recalculateUserBalance(userId: string): Promise<Recalculat
   }
 }
 
+export interface UserFinancialSummary {
+  email?: string;
+  totalInvestment: number;
+  accountBalance: number;
+  lockedValue: number;
+  currentValue: number;
+  lifetimeWithdrawals: number;
+  roi: number;
+  netGainLoss?: number;
+}
+
+export interface FinancialSummaryResponse {
+  success: boolean;
+  data?: UserFinancialSummary;
+  message?: string;
+  error?: string;
+}
+
+export interface UpdateUserFinancialRequest {
+  accountBalance?: number;
+  currentValue?: number;
+}
+
+export interface PortfolioAdjustment {
+  action: string;
+  tokenName: string;
+  tokenAmount: number;
+  usdValue: number;
+}
+
+export interface UpdateUserFinancialResponse {
+  success: boolean;
+  message: string;
+  data?: UserFinancialSummary;
+  before?: {
+    accountBalance: number;
+    currentValue: number;
+    lockedValue: number;
+    roi: number;
+  };
+  portfolioAdjustments?: PortfolioAdjustment[];
+  error?: string;
+  errorData?: {
+    accountBalance?: number;
+    currentValue?: number;
+    lockedValue?: number;
+    expectedCurrentValue?: number;
+  };
+}
+
+/**
+ * Admin: get user's equity summary (available, locked, current, ROI)
+ * GET /api/v1/portfolio/user/:userId/financial-summary
+ */
+export async function getUserFinancialSummary(
+  userId: string
+): Promise<FinancialSummaryResponse> {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('token')?.value;
+
+    if (!token) {
+      return { success: false, message: 'No authentication token found' };
+    }
+
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/portfolio/user/${userId}/financial-summary`,
+      {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        cache: 'no-store',
+      }
+    );
+
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok || !result.success) {
+      return {
+        success: false,
+        message: result.message || `Failed to fetch financial summary: ${response.statusText}`,
+        error: result.error,
+      };
+    }
+
+    return { success: true, data: result.data };
+  } catch (error) {
+    console.error('Error fetching financial summary:', error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to fetch financial summary',
+    };
+  }
+}
+
+/**
+ * Admin: set accountBalance and/or currentValue (portfolio-backed, durable through sync)
+ * PUT /api/v1/portfolio/user/:userId/financial
+ */
+export async function updateUserFinancials(
+  userId: string,
+  payload: UpdateUserFinancialRequest
+): Promise<UpdateUserFinancialResponse> {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('token')?.value;
+
+    if (!token) {
+      return { success: false, message: 'No authentication token found' };
+    }
+
+    if (payload.accountBalance === undefined && payload.currentValue === undefined) {
+      return {
+        success: false,
+        message: 'Provide accountBalance and/or currentValue',
+        error: 'NO_FINANCIAL_FIELDS',
+      };
+    }
+
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/portfolio/user/${userId}/financial`,
+      {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      }
+    );
+
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok || !result.success) {
+      return {
+        success: false,
+        message: result.message || `Failed to update financial metrics: ${response.statusText}`,
+        error: result.error,
+        errorData: result.data,
+      };
+    }
+
+    return {
+      success: true,
+      message: result.message || 'Financial metrics updated successfully',
+      data: result.data,
+      before: result.before,
+      portfolioAdjustments: result.portfolioAdjustments,
+    };
+  } catch (error) {
+    console.error('Error updating user financials:', error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to update financial metrics',
+    };
+  }
+}
+

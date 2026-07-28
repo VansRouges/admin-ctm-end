@@ -255,6 +255,125 @@ Authorization: Bearer YOUR_ADMIN_JWT_TOKEN
 
 ---
 
+### 5. Get User Financial Summary
+
+**Endpoint:** `GET /api/v1/portfolio/user/:userId/financial-summary`
+
+**Description:** Returns the user's equity summary: available balance, locked capital, total equity, ROI, and related metrics. Prefer this when loading the admin financial editor.
+
+**Authentication:** Required (Admin JWT Token)
+
+#### Success Response (200 OK)
+
+```json
+{
+  "success": true,
+  "data": {
+    "email": "user@example.com",
+    "totalInvestment": 8000,
+    "accountBalance": 7500,
+    "lockedValue": 3000,
+    "currentValue": 10500,
+    "lifetimeWithdrawals": 0,
+    "roi": 31.25,
+    "netGainLoss": 2500
+  }
+}
+```
+
+**Definitions:**
+- `accountBalance` = liquid/available portfolio value
+- `lockedValue` = capital locked in active copytrades + stocks (read-only in UI)
+- `currentValue` = `accountBalance + lockedValue`
+
+---
+
+### 6. Update User Financial Metrics (accountBalance / currentValue)
+
+**Endpoint:** `PUT /api/v1/portfolio/user/:userId/financial`
+
+**Description:** Admin sets a user's **available balance** (`accountBalance`) and/or **total equity** (`currentValue`). Changes adjust portfolio holdings so values **persist through financial sync**.
+
+Do **not** write these fields with a naive `PUT /users/:id` that assumes raw User-document writes persist — use this endpoint (or the same fields on `PUT /users/:id`, which runs the same portfolio-backed logic).
+
+**Authentication:** Required (Admin JWT Token)
+
+**Request Body:** at least one of:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `accountBalance` | Number | No* | Target available USD (>= 0) |
+| `currentValue` | Number | No* | Target total equity USD (>= 0) |
+
+**Rules:**
+1. Providing only `accountBalance` adjusts liquid holdings; `currentValue` becomes `accountBalance + lockedValue`.
+2. Providing only `currentValue` sets available to `currentValue - lockedValue` (must be >= 0).
+3. Providing both requires `currentValue === accountBalance + lockedValue` (±$0.01).
+4. Does **not** change `totalInvestment`.
+
+#### Example Request
+
+```json
+{
+  "accountBalance": 10000
+}
+```
+
+#### Success Response (200 OK)
+
+```json
+{
+  "success": true,
+  "message": "Financial metrics updated successfully",
+  "data": {
+    "email": "user@example.com",
+    "totalInvestment": 8000,
+    "accountBalance": 10000,
+    "lockedValue": 3000,
+    "currentValue": 13000,
+    "lifetimeWithdrawals": 0,
+    "roi": 62.5,
+    "netGainLoss": 5000
+  },
+  "before": {
+    "accountBalance": 7500,
+    "currentValue": 10500,
+    "lockedValue": 3000,
+    "roi": 31.25
+  },
+  "portfolioAdjustments": [
+    {
+      "action": "add",
+      "tokenName": "USDT",
+      "tokenAmount": 2500,
+      "usdValue": 2500
+    }
+  ]
+}
+```
+
+Use `data` to refresh the form after a successful save.
+
+#### Error — CURRENT_VALUE_LOCKED_MISMATCH (400)
+
+```json
+{
+  "success": false,
+  "message": "currentValue must equal accountBalance + lockedValue. Update accountBalance alone, or set currentValue to accountBalance + lockedValue. To change locked capital, update active copytrade/stock values.",
+  "error": "CURRENT_VALUE_LOCKED_MISMATCH",
+  "data": {
+    "accountBalance": 10000,
+    "currentValue": 20000,
+    "lockedValue": 3000,
+    "expectedCurrentValue": 13000
+  }
+}
+```
+
+**Alternate endpoint (same financial behavior):** `PUT /api/v1/users/:id` with `accountBalance` / `currentValue`.
+
+---
+
 ## Frontend Integration Examples
 
 ### Get All Users with Portfolios
@@ -409,8 +528,16 @@ const recalculateBalance = async (userId: string) => {
 
 1. Admin notices balance discrepancy
 2. Admin calls `POST /api/v1/portfolio/user/:userId/recalculate`
-3. System syncs `accountBalance` with current portfolio value
+3. System syncs `accountBalance` / `currentValue` with portfolio + locked trades
 4. Admin verifies new balance
+
+### Editing Account Balance / Current Value
+
+1. Admin opens user financial editor
+2. Load `GET /api/v1/portfolio/user/:userId/financial-summary`
+3. Show `lockedValue` as read-only context
+4. Save via `PUT /api/v1/portfolio/user/:userId/financial`
+5. Refresh form from response `data`
 
 ---
 
@@ -419,10 +546,11 @@ const recalculateBalance = async (userId: string) => {
 ### Key Points for Admin Developers
 
 ✅ **User Portfolio Access**: View any user's portfolio  
-✅ **Balance Management**: Recalculate balances when needed  
+✅ **Balance Management**: Recalculate or directly set accountBalance / currentValue  
 ✅ **Token Information**: Check available tokens for withdrawals  
 ✅ **Live Prices**: Prices fetched live from CoinMarketCap  
 ✅ **Sync Capability**: Recalculate to sync balance with portfolio  
+✅ **Durable financial edits**: Portfolio-backed updates persist through sync  
 
 ### Endpoints Summary
 
@@ -430,6 +558,8 @@ const recalculateBalance = async (userId: string) => {
 2. **GET `/user/:userId`** - Get user's complete portfolio
 3. **GET `/user/:userId/available-tokens`** - Get user's available tokens
 4. **POST `/user/:userId/recalculate`** - Recalculate user's account balance
+5. **GET `/user/:userId/financial-summary`** - Equity summary (available, locked, current, ROI)
+6. **PUT `/user/:userId/financial`** - Set accountBalance and/or currentValue
 
 ### Use Cases
 
@@ -437,6 +567,7 @@ const recalculateBalance = async (userId: string) => {
 - **User Management**: View all users and their portfolio status at once
 - **User Support**: View user's portfolio to help with inquiries
 - **Balance Verification**: Recalculate balance to verify accuracy
+- **Manual Financial Adjustments**: Set available balance or total equity for a user
 - **Withdrawal Processing**: Check available tokens before processing withdrawals
 - **Reporting**: Generate portfolio reports for users
 - **Maintenance**: Sync balances after system updates or price changes

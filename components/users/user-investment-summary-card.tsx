@@ -9,13 +9,15 @@ export function UserInvestmentSummaryCard(props: {
   totalInvestment: number
   accountBalance: number
   currentValue?: number
+  lockedValue?: number
   lifetimeWithdrawals?: number
   roi: number
 }) {
   const currentValue = props.currentValue ?? props.accountBalance ?? 0
   const lockedValue = useMemo(() => {
+    if (props.lockedValue !== undefined) return Math.max(0, props.lockedValue)
     return Math.max(0, currentValue - (props.accountBalance ?? 0))
-  }, [currentValue, props.accountBalance])
+  }, [currentValue, props.accountBalance, props.lockedValue])
 
   const net = useMemo(() => {
     const investment = props.totalInvestment ?? 0
@@ -33,7 +35,7 @@ export function UserInvestmentSummaryCard(props: {
           variant="ghost"
           size="icon"
           className="text-gray-300 hover:text-white"
-          title="Edit values in the Stats section"
+          title="Edit available balance and total equity in the Stats section above"
         >
           <Pencil className="h-5 w-5" />
         </Button>

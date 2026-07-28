@@ -10,6 +10,7 @@ import {
   BreadcrumbSeparator 
 } from "@/components/ui/breadcrumb"
 import { fetchUserById } from "@/app/actions/users"
+import { getUserFinancialSummary } from "@/app/actions/portfolio"
 import Link from "next/link"
 import { 
   UserHeaderSection 
@@ -73,6 +74,17 @@ export default async function UserInfoPage({ params }: { params: Promise<{ id: s
 
   const displayName = user.fullName || `${user.firstName} ${user.lastName}`.trim() || user.username
 
+  const financialSummaryResult = await getUserFinancialSummary(userId)
+  const financial = financialSummaryResult.success ? financialSummaryResult.data : undefined
+  const accountBalance = financial?.accountBalance ?? user.accountBalance ?? 0
+  const currentValue = financial?.currentValue ?? user.currentValue ?? accountBalance
+  const lockedValue =
+    financial?.lockedValue ?? Math.max(0, currentValue - accountBalance)
+  const totalInvestment = financial?.totalInvestment ?? user.totalInvestment ?? 0
+  const lifetimeWithdrawals =
+    financial?.lifetimeWithdrawals ?? user.lifetimeWithdrawals ?? 0
+  const roi = financial?.roi ?? user.roi ?? 0
+
   return (
     <SidebarProvider
       style={
@@ -125,12 +137,14 @@ export default async function UserInfoPage({ params }: { params: Promise<{ id: s
               {/* User Actions - Deposit & Withdrawal */}
               <UserActionsSection userId={userId} />
 
-              {/* Stats with editable numeric + boolean fields */}
+              {/* Stats with editable financial metrics (via portfolio financial endpoint) */}
               <UserStatsCards
                 userId={userId}
-                accountBalance={user.accountBalance}
-                totalInvestment={user.totalInvestment}
-                roi={user.roi}
+                accountBalance={accountBalance}
+                currentValue={currentValue}
+                lockedValue={lockedValue}
+                totalInvestment={totalInvestment}
+                roi={roi}
                 kycStatus={user.kycStatus}
               />
 
@@ -154,13 +168,14 @@ export default async function UserInfoPage({ params }: { params: Promise<{ id: s
                 />
               </div>
 
-              {/* Investment summary (derived). Pencil present but fields are same as stats; kept view-only here */}
+              {/* Investment summary — edit financials from Stats pencil */}
               <UserInvestmentSummaryCard
-                totalInvestment={user.totalInvestment ?? 0}
-                accountBalance={user.accountBalance ?? 0}
-                currentValue={user.currentValue ?? 0}
-                lifetimeWithdrawals={user.lifetimeWithdrawals ?? 0}
-                roi={user.roi ?? 0}
+                totalInvestment={totalInvestment}
+                accountBalance={accountBalance}
+                currentValue={currentValue}
+                lockedValue={lockedValue}
+                lifetimeWithdrawals={lifetimeWithdrawals}
+                roi={roi}
               />
             </div>
           </div>
